@@ -199,7 +199,7 @@ async function logout(req, res) {
  * Requires auth middleware that sets req.user = { sub, email }.
  */
 async function logoutAll(req, res) {
-  const userId = req.user?.sub;
+  const userId = req.userId || req.user?.sub;
   if (!userId) {
     return res.status(401).json({ error: 'Unauthorized.' });
   }
