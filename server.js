@@ -7,6 +7,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use('/auth', require('./routes/auth'));
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
