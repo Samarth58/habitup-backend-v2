@@ -1,9 +1,14 @@
 const {
   createHabit: createHabitService,
   getHabitsForUser,
+  getArchivedHabitsForUser,
   getHabitById,
   updateHabit: updateHabitService,
   softDeleteHabit,
+  pauseHabit: pauseHabitService,
+  unpauseHabit: unpauseHabitService,
+  archiveHabit: archiveHabitService,
+  unarchiveHabit: unarchiveHabitService,
   setHabitSchedule,
   getHabitSchedule,
   addCompletion,
@@ -16,7 +21,6 @@ const { calculateStreak } = require('../services/streakService');
 /**
  * POST /habits
  * Creates a new habit for the authenticated user.
- * Accepts optional `days` array if `frequency_type` is 'scheduled'.
  */
 async function createHabit(req, res) {
   const userId = req.userId;
@@ -69,6 +73,31 @@ async function listHabits(req, res) {
   } catch (err) {
     console.error('[listHabits]', err);
     return res.status(500).json({ error: 'Failed to fetch habits.' });
+  }
+}
+
+/**
+ * GET /habits/archived
+ * Returns all archived habits for the authenticated user along with their schedules & streaks.
+ */
+async function listArchivedHabits(req, res) {
+  const userId = req.userId;
+
+  try {
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const habits = await getArchivedHabitsForUser(userId);
+    const habitsWithDetails = await Promise.all(
+      habits.map(async (habit) => {
+        const schedule = await getHabitSchedule(habit.id);
+        const completionDates = await getCompletionDates(userId, habit.id);
+        const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+        return { ...habit, schedule, streak };
+      })
+    );
+    return res.json({ habits: habitsWithDetails });
+  } catch (err) {
+    console.error('[listArchivedHabits]', err);
+    return res.status(500).json({ error: 'Failed to fetch archived habits.' });
   }
 }
 
@@ -158,6 +187,106 @@ async function deleteHabit(req, res) {
 }
 
 /**
+ * PATCH /habits/:id/pause
+ * Pauses a habit belonging to the authenticated user.
+ */
+async function pauseHabit(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await pauseHabitService(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
+  } catch (err) {
+    console.error('[pauseHabit]', err);
+    return res.status(500).json({ error: 'Failed to pause habit.' });
+  }
+}
+
+/**
+ * PATCH /habits/:id/unpause
+ * Unpauses a habit belonging to the authenticated user.
+ */
+async function unpauseHabit(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await unpauseHabitService(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
+  } catch (err) {
+    console.error('[unpauseHabit]', err);
+    return res.status(500).json({ error: 'Failed to unpause habit.' });
+  }
+}
+
+/**
+ * PATCH /habits/:id/archive
+ * Archives a habit belonging to the authenticated user.
+ */
+async function archiveHabit(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await archiveHabitService(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
+  } catch (err) {
+    console.error('[archiveHabit]', err);
+    return res.status(500).json({ error: 'Failed to archive habit.' });
+  }
+}
+
+/**
+ * PATCH /habits/:id/unarchive
+ * Unarchives a habit belonging to the authenticated user.
+ */
+async function unarchiveHabit(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await unarchiveHabitService(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
+  } catch (err) {
+    console.error('[unarchiveHabit]', err);
+    return res.status(500).json({ error: 'Failed to unarchive habit.' });
+  }
+}
+
+/**
  * POST /habits/:id/completions
  * Records completion for today in user's timezone and returns the completion record & updated streak.
  */
@@ -219,9 +348,14 @@ async function removeHabitCompletion(req, res) {
 module.exports = {
   createHabit,
   listHabits,
+  listArchivedHabits,
   getHabit,
   updateHabit,
   deleteHabit,
+  pauseHabit,
+  unpauseHabit,
+  archiveHabit,
+  unarchiveHabit,
   addHabitCompletion,
   removeHabitCompletion,
 };

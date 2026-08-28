@@ -240,12 +240,102 @@ async function getUserTimezone(userId, reqTimezone) {
   return rows[0]?.timezone || 'UTC';
 }
 
+/**
+ * Sets paused_at = NOW() for a habit owned by the specified user (and not deleted).
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<object|null>} The updated habit row or null if not found.
+ */
+async function pauseHabit(userId, habitId) {
+  const { rows } = await pool.query(
+    `UPDATE habits
+     SET paused_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [habitId, userId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Sets paused_at = NULL for a habit owned by the specified user (and not deleted).
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<object|null>} The updated habit row or null if not found.
+ */
+async function unpauseHabit(userId, habitId) {
+  const { rows } = await pool.query(
+    `UPDATE habits
+     SET paused_at = NULL, updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [habitId, userId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Sets archived_at = NOW() for a habit owned by the specified user (and not deleted).
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<object|null>} The updated habit row or null if not found.
+ */
+async function archiveHabit(userId, habitId) {
+  const { rows } = await pool.query(
+    `UPDATE habits
+     SET archived_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [habitId, userId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Sets archived_at = NULL for a habit owned by the specified user (and not deleted).
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<object|null>} The updated habit row or null if not found.
+ */
+async function unarchiveHabit(userId, habitId) {
+  const { rows } = await pool.query(
+    `UPDATE habits
+     SET archived_at = NULL, updated_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+     RETURNING *`,
+    [habitId, userId]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Fetch all archived habits for a user (archived_at IS NOT NULL AND deleted_at IS NULL).
+ * @param {string} userId
+ * @returns {Promise<Array<object>>}
+ */
+async function getArchivedHabitsForUser(userId) {
+  const { rows } = await pool.query(
+    `SELECT * FROM habits
+     WHERE user_id = $1
+       AND archived_at IS NOT NULL
+       AND deleted_at IS NULL
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+  return rows;
+}
+
 module.exports = {
   createHabit,
   getHabitsForUser,
+  getArchivedHabitsForUser,
   getHabitById,
   updateHabit,
   softDeleteHabit,
+  pauseHabit,
+  unpauseHabit,
+  archiveHabit,
+  unarchiveHabit,
   setHabitSchedule,
   getHabitSchedule,
   addCompletion,
@@ -253,4 +343,5 @@ module.exports = {
   getCompletionDates,
   getUserTimezone,
 };
+
 
