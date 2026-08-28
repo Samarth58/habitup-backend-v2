@@ -4,11 +4,13 @@ const argon2 = require('argon2');
 const {
   createUser,
   findUserByEmail,
+  findUserById,
   createSession,
   findActiveSessionByJti,
   revokeSession,
   revokeAllSessionsForUser,
 } = require('../services/authService');
+
 
 const ACCESS_SECRET     = process.env.JWT_ACCESS_SECRET;
 const REFRESH_SECRET    = process.env.JWT_REFRESH_SECRET;
@@ -213,4 +215,27 @@ async function logoutAll(req, res) {
   }
 }
 
-module.exports = { register, login, refresh, logout, logoutAll };
+/**
+ * GET /auth/me
+ * Header: Authorization: Bearer <accessToken>
+ *
+ * Returns the authenticated user's profile (id, name, email, timezone, created_at).
+ * Uses req.userId. Never returns password_hash.
+ */
+async function getMe(req, res) {
+  const userId = req.userId;
+
+  try {
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    return res.json({ user });
+  } catch (err) {
+    console.error('[getMe]', err);
+    return res.status(500).json({ error: 'Failed to fetch user profile.' });
+  }
+}
+
+module.exports = { register, login, refresh, logout, logoutAll, getMe };
+

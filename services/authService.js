@@ -112,9 +112,25 @@ async function revokeAllSessionsForUser(userId) {
   );
 }
 
+/**
+ * Find a user profile by ID, excluding password_hash.
+ * @param {string} userId
+ * @returns {Promise<object|null>}
+ */
+async function findUserById(userId) {
+  const { rows } = await pool.query(
+    `SELECT id, name, email, timezone, created_at
+     FROM users
+     WHERE id = $1`,
+    [userId]
+  );
+  return rows[0] ?? null;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
+  findUserById,
   createSession,
   findActiveSessionByJti,
   revokeSession,
