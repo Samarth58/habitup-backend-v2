@@ -9,7 +9,10 @@ const {
   findActiveSessionByJti,
   revokeSession,
   revokeAllSessionsForUser,
+  createPasswordResetToken,
+  resetPassword,
 } = require('../services/authService');
+
 
 
 const ACCESS_SECRET     = process.env.JWT_ACCESS_SECRET;
@@ -237,5 +240,69 @@ async function getMe(req, res) {
   }
 }
 
-module.exports = { register, login, refresh, logout, logoutAll, getMe };
+/**
+ * POST /auth/reset-password/request
+ * Body: { email }
+ *
+ * Always returns a generic message to prevent email enumeration.
+ * For MVP/dev testing without an email service, devToken is included in the response.
+ */
+async function requestPasswordReset(req, res) {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'email is required.' });
+  }
+
+  try {
+    const devToken = await createPasswordResetToken(email);
+
+    return res.json({
+      message: 'If that email exists, a password reset link has been sent.',
+      // DEV-ONLY SHORTCUT: Included for MVP testing until email delivery service is configured. Remove in production!
+      devToken: devToken ?? undefined,
+    });
+  } catch (err) {
+    console.error('[requestPasswordReset]', err);
+    return res.status(500).json({ error: 'Failed to request password reset.' });
+  }
+}
+
+/**
+ * POST /auth/reset-password/confirm
+ * Body: { token, newPassword }
+ *
+ * Confirms password reset using valid token and sets new password.
+ */
+async function confirmPasswordReset(req, res) {
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'token and newPassword are required.' });
+  }
+
+  try {
+    const success = await resetPassword(token, newPassword);
+    if (!success) {
+      return res.status(400).json({ error: 'Invalid, expired, or already used reset token.' });
+    }
+
+    return res.json({ message: 'Password has been reset successfully.' });
+  } catch (err) {
+    console.error('[confirmPasswordReset]', err);
+    return res.status(500).json({ error: 'Failed to reset password.' });
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  logoutAll,
+  getMe,
+  requestPasswordReset,
+  confirmPasswordReset,
+};
+
 

@@ -1,5 +1,7 @@
+const crypto = require('crypto');
 const argon2 = require('argon2');
 const { Pool } = require('pg');
+
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -127,6 +129,76 @@ async function findUserById(userId) {
   return rows[0] ?? null;
 }
 
+/**
+ * Creates a password reset token for a user (15 min expiry) and returns the raw (unhashed) token.
+ * Returns null if user is not found.
+ *
+ * @param {string} email
+ * @returns {Promise<string|null>} Raw unhashed token or null if email not found.
+ */
+async function createPasswordResetToken(email) {
+  const user = await findUserByEmail(email);
+  if (!user) {
+    return null;
+  }
+
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = await argon2.hash(rawToken);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  await pool.query(
+    `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [user.id, tokenHash, expiresAt]
+  );
+
+  return rawToken;
+}
+
+/**
+ * Resets user password if token is valid, unexpired, and unused.
+ * Updates user's password_hash, marks token as used, and revokes all active sessions.
+ *
+ * @param {string} rawToken
+ * @param {string} newPassword
+ * @returns {Promise<boolean>} True if successful, false otherwise.
+ */
+async function resetPassword(rawToken, newPassword) {
+  const { rows } = await pool.query(
+    `SELECT id, user_id, token_hash, expires_at, used_at
+     FROM password_reset_tokens
+     WHERE used_at IS NULL AND expires_at > NOW()`
+  );
+
+  let matchedToken = null;
+  for (const row of rows) {
+    if (await argon2.verify(row.token_hash, rawToken)) {
+      matchedToken = row;
+      break;
+    }
+  }
+
+  if (!matchedToken) {
+    return false;
+  }
+
+  const newPasswordHash = await argon2.hash(newPassword);
+
+  await pool.query(
+    `UPDATE users SET password_hash = $1 WHERE id = $2`,
+    [newPasswordHash, matchedToken.user_id]
+  );
+
+  await pool.query(
+    `UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1`,
+    [matchedToken.id]
+  );
+
+  await revokeAllSessionsForUser(matchedToken.user_id);
+
+  return true;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -135,4 +207,6 @@ module.exports = {
   findActiveSessionByJti,
   revokeSession,
   revokeAllSessionsForUser,
+  createPasswordResetToken,
+  resetPassword,
 };
