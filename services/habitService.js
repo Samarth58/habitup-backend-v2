@@ -137,6 +137,7 @@ async function setHabitSchedule(habitId, daysOfWeek) {
 }
 
 /**
+/**
  * Returns an array of scheduled day_of_week integers for a habit.
  * @param {string} habitId
  * @returns {Promise<Array<number>>}
@@ -151,6 +152,94 @@ async function getHabitSchedule(habitId) {
   return rows.map((r) => r.day_of_week);
 }
 
+/**
+ * Determines "today" using the user's timezone and inserts a habit completion row.
+ * Handles UNIQUE(habit_id, completion_date) constraint gracefully (undo-toggle safe).
+ *
+ * @param {string} userId
+ * @param {string} habitId
+ * @param {string} timezone IANA timezone string
+ * @returns {Promise<object>} The inserted or existing completion record.
+ */
+async function addCompletion(userId, habitId, timezone) {
+  let todayStr;
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const parts = formatter.formatToParts(new Date());
+    const year = parts.find((p) => p.type === 'year').value;
+    const month = parts.find((p) => p.type === 'month').value;
+    const day = parts.find((p) => p.type === 'day').value;
+    todayStr = `${year}-${month}-${day}`;
+  } catch (err) {
+    todayStr = new Date().toISOString().slice(0, 10);
+  }
+
+  const query = `
+    INSERT INTO habit_completions (habit_id, user_id, completion_date)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (habit_id, completion_date)
+    DO UPDATE SET completion_date = EXCLUDED.completion_date
+    RETURNING id, habit_id, user_id, to_char(completion_date, 'YYYY-MM-DD') AS completion_date, completed_at, created_at
+  `;
+
+  const { rows } = await pool.query(query, [habitId, userId, todayStr]);
+  return rows[0];
+}
+
+/**
+ * Deletes the completion row for habit_id + completion_date, scoped to user_id.
+ *
+ * @param {string} userId
+ * @param {string} habitId
+ * @param {string} dateStr "YYYY-MM-DD"
+ * @returns {Promise<boolean>} True if removed, false if not found.
+ */
+async function removeCompletion(userId, habitId, dateStr) {
+  const query = `
+    DELETE FROM habit_completions
+    WHERE habit_id = $1 AND user_id = $2 AND completion_date = $3
+    RETURNING id
+  `;
+  const { rowCount } = await pool.query(query, [habitId, userId, dateStr]);
+  return rowCount > 0;
+}
+
+/**
+ * Returns an array of completion_date strings ("YYYY-MM-DD") for a habit belonging to a user.
+ *
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<Array<string>>}
+ */
+async function getCompletionDates(userId, habitId) {
+  const query = `
+    SELECT to_char(completion_date, 'YYYY-MM-DD') AS completion_date
+    FROM habit_completions
+    WHERE habit_id = $1 AND user_id = $2
+    ORDER BY completion_date ASC
+  `;
+  const { rows } = await pool.query(query, [habitId, userId]);
+  return rows.map((r) => r.completion_date);
+}
+
+/**
+ * Helper to fetch user's timezone from DB if not present in request.
+ *
+ * @param {string} userId
+ * @param {string} [reqTimezone]
+ * @returns {Promise<string>}
+ */
+async function getUserTimezone(userId, reqTimezone) {
+  if (reqTimezone) return reqTimezone;
+  const { rows } = await pool.query('SELECT timezone FROM users WHERE id = $1', [userId]);
+  return rows[0]?.timezone || 'UTC';
+}
+
 module.exports = {
   createHabit,
   getHabitsForUser,
@@ -159,4 +248,9 @@ module.exports = {
   softDeleteHabit,
   setHabitSchedule,
   getHabitSchedule,
+  addCompletion,
+  removeCompletion,
+  getCompletionDates,
+  getUserTimezone,
 };
+

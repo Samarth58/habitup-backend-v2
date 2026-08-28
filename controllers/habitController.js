@@ -6,7 +6,12 @@ const {
   softDeleteHabit,
   setHabitSchedule,
   getHabitSchedule,
+  addCompletion,
+  removeCompletion,
+  getCompletionDates,
+  getUserTimezone,
 } = require('../services/habitService');
+const { calculateStreak } = require('../services/streakService');
 
 /**
  * POST /habits
@@ -35,7 +40,7 @@ async function createHabit(req, res) {
     }
 
     const schedule = await getHabitSchedule(habit.id);
-    return res.status(201).json({ habit: { ...habit, schedule } });
+    return res.status(201).json({ habit: { ...habit, schedule, streak: 0 } });
   } catch (err) {
     console.error('[createHabit]', err);
     return res.status(500).json({ error: 'Failed to create habit.' });
@@ -44,20 +49,23 @@ async function createHabit(req, res) {
 
 /**
  * GET /habits
- * Returns all active habits for the authenticated user along with their schedules.
+ * Returns all active habits for the authenticated user along with their schedules & streaks.
  */
 async function listHabits(req, res) {
   const userId = req.userId;
 
   try {
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
     const habits = await getHabitsForUser(userId);
-    const habitsWithSchedule = await Promise.all(
+    const habitsWithDetails = await Promise.all(
       habits.map(async (habit) => {
         const schedule = await getHabitSchedule(habit.id);
-        return { ...habit, schedule };
+        const completionDates = await getCompletionDates(userId, habit.id);
+        const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+        return { ...habit, schedule, streak };
       })
     );
-    return res.json({ habits: habitsWithSchedule });
+    return res.json({ habits: habitsWithDetails });
   } catch (err) {
     console.error('[listHabits]', err);
     return res.status(500).json({ error: 'Failed to fetch habits.' });
@@ -66,7 +74,7 @@ async function listHabits(req, res) {
 
 /**
  * GET /habits/:id
- * Returns a specific habit belonging to the authenticated user along with its schedule.
+ * Returns a specific habit belonging to the authenticated user along with its schedule & streak.
  */
 async function getHabit(req, res) {
   const userId = req.userId;
@@ -77,8 +85,13 @@ async function getHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habit.id);
-    return res.json({ habit: { ...habit, schedule } });
+    const completionDates = await getCompletionDates(userId, habit.id);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
   } catch (err) {
     console.error('[getHabit]', err);
     return res.status(500).json({ error: 'Failed to fetch habit.' });
@@ -112,8 +125,12 @@ async function updateHabit(req, res) {
       await setHabitSchedule(habitId, days);
     }
 
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habitId);
-    return res.json({ habit: { ...habit, schedule } });
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ habit: { ...habit, schedule, streak } });
   } catch (err) {
     console.error('[updateHabit]', err);
     return res.status(500).json({ error: 'Failed to update habit.' });
@@ -140,10 +157,71 @@ async function deleteHabit(req, res) {
   }
 }
 
+/**
+ * POST /habits/:id/completions
+ * Records completion for today in user's timezone and returns the completion record & updated streak.
+ */
+async function addHabitCompletion(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await getHabitById(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const completion = await addCompletion(userId, habitId, timezone);
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.status(201).json({ completion, streak });
+  } catch (err) {
+    console.error('[addHabitCompletion]', err);
+    return res.status(500).json({ error: 'Failed to record completion.' });
+  }
+}
+
+/**
+ * DELETE /habits/:id/completions/:date
+ * Removes completion for a specified date and returns the updated streak.
+ */
+async function removeHabitCompletion(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+  const dateStr = req.params.date;
+
+  try {
+    const habit = await getHabitById(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const removed = await removeCompletion(userId, habitId, dateStr);
+    if (!removed) {
+      return res.status(404).json({ error: 'Completion not found.' });
+    }
+
+    const schedule = await getHabitSchedule(habitId);
+    const completionDates = await getCompletionDates(userId, habitId);
+    const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    return res.json({ message: 'Completion removed.', streak });
+  } catch (err) {
+    console.error('[removeHabitCompletion]', err);
+    return res.status(500).json({ error: 'Failed to remove completion.' });
+  }
+}
+
 module.exports = {
   createHabit,
   listHabits,
   getHabit,
   updateHabit,
   deleteHabit,
+  addHabitCompletion,
+  removeHabitCompletion,
 };

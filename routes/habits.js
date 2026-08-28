@@ -5,6 +5,8 @@ const {
   getHabit,
   updateHabit,
   deleteHabit,
+  addHabitCompletion,
+  removeHabitCompletion,
 } = require('../controllers/habitController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
@@ -18,5 +20,8 @@ router.get('/', listHabits);
 router.get('/:id', getHabit);
 router.patch('/:id', updateHabit);
 router.delete('/:id', deleteHabit);
+
+router.post('/:id/completions', addHabitCompletion);
+router.delete('/:id/completions/:date', removeHabitCompletion);
 
 module.exports = router;
