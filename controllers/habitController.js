@@ -4,15 +4,18 @@ const {
   getHabitById,
   updateHabit: updateHabitService,
   softDeleteHabit,
+  setHabitSchedule,
+  getHabitSchedule,
 } = require('../services/habitService');
 
 /**
  * POST /habits
  * Creates a new habit for the authenticated user.
+ * Accepts optional `days` array if `frequency_type` is 'scheduled'.
  */
 async function createHabit(req, res) {
   const userId = req.userId;
-  const { name, description, icon, color, frequency_type } = req.body;
+  const { name, description, icon, color, frequency_type, days } = req.body;
 
   if (!name || !frequency_type) {
     return res.status(400).json({ error: 'name and frequency_type are required.' });
@@ -26,7 +29,13 @@ async function createHabit(req, res) {
       color,
       frequency_type,
     });
-    return res.status(201).json({ habit });
+
+    if (frequency_type === 'scheduled' && Array.isArray(days)) {
+      await setHabitSchedule(habit.id, days);
+    }
+
+    const schedule = await getHabitSchedule(habit.id);
+    return res.status(201).json({ habit: { ...habit, schedule } });
   } catch (err) {
     console.error('[createHabit]', err);
     return res.status(500).json({ error: 'Failed to create habit.' });
@@ -35,14 +44,20 @@ async function createHabit(req, res) {
 
 /**
  * GET /habits
- * Returns all active habits for the authenticated user.
+ * Returns all active habits for the authenticated user along with their schedules.
  */
 async function listHabits(req, res) {
   const userId = req.userId;
 
   try {
     const habits = await getHabitsForUser(userId);
-    return res.json({ habits });
+    const habitsWithSchedule = await Promise.all(
+      habits.map(async (habit) => {
+        const schedule = await getHabitSchedule(habit.id);
+        return { ...habit, schedule };
+      })
+    );
+    return res.json({ habits: habitsWithSchedule });
   } catch (err) {
     console.error('[listHabits]', err);
     return res.status(500).json({ error: 'Failed to fetch habits.' });
@@ -51,7 +66,7 @@ async function listHabits(req, res) {
 
 /**
  * GET /habits/:id
- * Returns a specific habit belonging to the authenticated user.
+ * Returns a specific habit belonging to the authenticated user along with its schedule.
  */
 async function getHabit(req, res) {
   const userId = req.userId;
@@ -62,7 +77,8 @@ async function getHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
-    return res.json({ habit });
+    const schedule = await getHabitSchedule(habit.id);
+    return res.json({ habit: { ...habit, schedule } });
   } catch (err) {
     console.error('[getHabit]', err);
     return res.status(500).json({ error: 'Failed to fetch habit.' });
@@ -71,23 +87,33 @@ async function getHabit(req, res) {
 
 /**
  * PATCH /habits/:id
- * Updates specific fields of a habit belonging to the authenticated user.
+ * Updates specific fields and/or schedule days of a habit belonging to the authenticated user.
  */
 async function updateHabit(req, res) {
   const userId = req.userId;
   const habitId = req.params.id;
-  const fields = req.body;
+  const { days, ...fields } = req.body;
 
-  if (!fields || Object.keys(fields).length === 0) {
-    return res.status(400).json({ error: 'At least one field to update is required.' });
+  if (Object.keys(fields).length === 0 && !Array.isArray(days)) {
+    return res.status(400).json({ error: 'At least one field or days array to update is required.' });
   }
 
   try {
-    const habit = await updateHabitService(userId, habitId, fields);
+    let habit = await getHabitById(userId, habitId);
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
-    return res.json({ habit });
+
+    if (Object.keys(fields).length > 0) {
+      habit = await updateHabitService(userId, habitId, fields);
+    }
+
+    if (Array.isArray(days)) {
+      await setHabitSchedule(habitId, days);
+    }
+
+    const schedule = await getHabitSchedule(habitId);
+    return res.json({ habit: { ...habit, schedule } });
   } catch (err) {
     console.error('[updateHabit]', err);
     return res.status(500).json({ error: 'Failed to update habit.' });

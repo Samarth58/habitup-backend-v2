@@ -105,10 +105,58 @@ async function softDeleteHabit(userId, habitId) {
   return rowCount > 0;
 }
 
+/**
+ * Replaces schedule entries for a given habit with the provided array of days (0-6).
+ * Deletes existing schedule rows for that habit first, then inserts the new set.
+ * @param {string} habitId
+ * @param {Array<number>} daysOfWeek Array of integer days (0 = Sunday, 6 = Saturday)
+ * @returns {Promise<Array<number>>} The saved schedule array.
+ */
+async function setHabitSchedule(habitId, daysOfWeek) {
+  await pool.query('DELETE FROM habit_schedules WHERE habit_id = $1', [habitId]);
+
+  if (!Array.isArray(daysOfWeek) || daysOfWeek.length === 0) {
+    return [];
+  }
+
+  const uniqueDays = [...new Set(daysOfWeek.map((d) => Number(d)))].filter(
+    (d) => Number.isInteger(d) && d >= 0 && d <= 6
+  );
+
+  if (uniqueDays.length === 0) {
+    return [];
+  }
+
+  const valueStrings = uniqueDays.map((_, idx) => `($1, $${idx + 2})`).join(', ');
+  await pool.query(
+    `INSERT INTO habit_schedules (habit_id, day_of_week) VALUES ${valueStrings}`,
+    [habitId, ...uniqueDays]
+  );
+
+  return uniqueDays.sort((a, b) => a - b);
+}
+
+/**
+ * Returns an array of scheduled day_of_week integers for a habit.
+ * @param {string} habitId
+ * @returns {Promise<Array<number>>}
+ */
+async function getHabitSchedule(habitId) {
+  const { rows } = await pool.query(
+    `SELECT day_of_week FROM habit_schedules
+     WHERE habit_id = $1
+     ORDER BY day_of_week ASC`,
+    [habitId]
+  );
+  return rows.map((r) => r.day_of_week);
+}
+
 module.exports = {
   createHabit,
   getHabitsForUser,
   getHabitById,
   updateHabit,
   softDeleteHabit,
+  setHabitSchedule,
+  getHabitSchedule,
 };
