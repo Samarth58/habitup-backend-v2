@@ -12,6 +12,8 @@ const {
   unarchiveHabit,
   addHabitCompletion,
   removeHabitCompletion,
+  getHabitStatsHandler,
+  getUserStatsHandler,
 } = require('../controllers/habitController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
@@ -23,6 +25,8 @@ router.use(requireAuth);
 router.post('/', createHabit);
 router.get('/', listHabits);
 router.get('/archived', listArchivedHabits);
+router.get('/stats', getUserStatsHandler);
+router.get('/:id/stats', getHabitStatsHandler);
 router.get('/:id', getHabit);
 router.patch('/:id', updateHabit);
 router.delete('/:id', deleteHabit);

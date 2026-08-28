@@ -17,6 +17,7 @@ const {
   getUserTimezone,
 } = require('../services/habitService');
 const { calculateStreak } = require('../services/streakService');
+const { getHabitStats, getUserOverallStats } = require('../services/statsService');
 
 /**
  * POST /habits
@@ -345,6 +346,49 @@ async function removeHabitCompletion(req, res) {
   }
 }
 
+/**
+ * GET /habits/:id/stats
+ * Query params: ?period=month|year (default: 'month')
+ * Returns statistics for a specific habit (current_streak, best_streak, total_completions, completion_rate, period).
+ */
+async function getHabitStatsHandler(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+  const period = req.query.period === 'year' ? 'year' : 'month';
+
+  try {
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const stats = await getHabitStats(userId, habitId, timezone, period);
+    if (!stats) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+    return res.json(stats);
+  } catch (err) {
+    console.error('[getHabitStatsHandler]', err);
+    return res.status(500).json({ error: 'Failed to fetch habit statistics.' });
+  }
+}
+
+/**
+ * GET /stats or GET /habits/stats
+ * Query params: ?period=month|year (default: 'month')
+ * Aggregates statistics across all active (non-deleted, non-archived) habits for the user.
+ * Returns { overall_completion_rate, total_completions, habits: [...] }.
+ */
+async function getUserStatsHandler(req, res) {
+  const userId = req.userId;
+  const period = req.query.period === 'year' ? 'year' : 'month';
+
+  try {
+    const timezone = await getUserTimezone(userId, req.user?.timezone);
+    const stats = await getUserOverallStats(userId, timezone, period);
+    return res.json(stats);
+  } catch (err) {
+    console.error('[getUserStatsHandler]', err);
+    return res.status(500).json({ error: 'Failed to fetch user overall statistics.' });
+  }
+}
+
 module.exports = {
   createHabit,
   listHabits,
@@ -358,4 +402,6 @@ module.exports = {
   unarchiveHabit,
   addHabitCompletion,
   removeHabitCompletion,
+  getHabitStatsHandler,
+  getUserStatsHandler,
 };

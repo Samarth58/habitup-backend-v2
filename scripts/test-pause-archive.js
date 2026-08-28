@@ -9,29 +9,36 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:5000';
 async function runTests() {
   console.log(`Starting pause & archive habit tests against ${BASE_URL}...\n`);
 
-  // Step 0: Fresh login
+  const uniqueEmail = `testuser_pause_archive_${Date.now()}@example.com`;
+  const password = 'testpass123';
+
+  // Step 0: Register fresh unique user
   let accessToken;
   try {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+    const res = await fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'test@example.com',
-        password: 'testpass123',
+        name: 'Pause Archive Test User',
+        email: uniqueEmail,
+        password: password,
+        timezone: 'Asia/Kolkata',
       }),
     });
 
     const data = await res.json();
     if (!res.ok || !data.accessToken) {
-      console.error('[FAIL] Step 0: Login failed.', data);
-      process.exit(1);
+      console.error('[FAIL] Step 0: Registration failed.', data);
+      process.exitCode = 1;
+      return;
     }
 
     accessToken = data.accessToken;
-    console.log('[PASS] Step 0: Logged in successfully.');
+    console.log(`[PASS] Step 0: Registered fresh user ${uniqueEmail}.`);
   } catch (err) {
-    console.error('[FAIL] Step 0: Exception during login.', err.message);
-    process.exit(1);
+    console.error('[FAIL] Step 0: Exception during registration.', err.message);
+    process.exitCode = 1;
+    return;
   }
 
   const authHeaders = {
@@ -55,14 +62,16 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !data.habit || !data.habit.id) {
       console.error('[FAIL] Step 1: Create habit failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     habitId = data.habit.id;
     console.log(`[PASS] Step 1: Created habit "Meditate 10 mins" (ID: ${habitId}).`);
   } catch (err) {
     console.error('[FAIL] Step 1: Exception during habit creation.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 2: Pause habit
@@ -75,13 +84,15 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !data.habit || !data.habit.paused_at) {
       console.error('[FAIL] Step 2: Pause habit failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log(`[PASS] Step 2: Paused habit. paused_at: ${data.habit.paused_at}.`);
   } catch (err) {
     console.error('[FAIL] Step 2: Exception during pause habit.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 3: Unpause habit
@@ -94,13 +105,15 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !data.habit || data.habit.paused_at !== null) {
       console.error('[FAIL] Step 3: Unpause habit failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log('[PASS] Step 3: Unpaused habit. paused_at is null.');
   } catch (err) {
     console.error('[FAIL] Step 3: Exception during unpause habit.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 4: Archive habit
@@ -113,13 +126,15 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !data.habit || !data.habit.archived_at) {
       console.error('[FAIL] Step 4: Archive habit failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log(`[PASS] Step 4: Archived habit. archived_at: ${data.habit.archived_at}.`);
   } catch (err) {
     console.error('[FAIL] Step 4: Exception during archive habit.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 5: Verify GET /habits/archived includes the habit
@@ -132,19 +147,22 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !Array.isArray(data.habits)) {
       console.error('[FAIL] Step 5: GET /habits/archived failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     const found = data.habits.some((h) => h.id === habitId);
     if (!found) {
       console.error(`[FAIL] Step 5: Habit ${habitId} not found in archived list.`, data.habits);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log('[PASS] Step 5: Verified habit appears in GET /habits/archived.');
   } catch (err) {
     console.error('[FAIL] Step 5: Exception during GET archived habits.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 6: Unarchive habit
@@ -157,13 +175,15 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !data.habit || data.habit.archived_at !== null) {
       console.error('[FAIL] Step 6: Unarchive habit failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log('[PASS] Step 6: Unarchived habit. archived_at is null.');
   } catch (err) {
     console.error('[FAIL] Step 6: Exception during unarchive habit.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // Step 7: Verify GET /habits/archived no longer includes the habit
@@ -176,25 +196,28 @@ async function runTests() {
     const data = await res.json();
     if (!res.ok || !Array.isArray(data.habits)) {
       console.error('[FAIL] Step 7: GET /habits/archived failed.', data);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     const found = data.habits.some((h) => h.id === habitId);
     if (found) {
       console.error(`[FAIL] Step 7: Habit ${habitId} should NOT be in archived list.`, data.habits);
-      process.exit(1);
+      process.exitCode = 1;
+      return;
     }
 
     console.log('[PASS] Step 7: Verified habit no longer appears in GET /habits/archived.');
   } catch (err) {
     console.error('[FAIL] Step 7: Exception during GET archived habits after unarchive.', err.message);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   console.log('\n----------------------------------------');
   console.log('ALL PAUSE & ARCHIVE TESTS PASSED!');
   console.log('----------------------------------------');
-  process.exit(0);
+  process.exitCode = 0;
 }
 
 runTests();

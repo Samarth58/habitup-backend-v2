@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const { requireAuth } = require('./middleware/authMiddleware');
+const { getUserStatsHandler } = require('./controllers/habitController');
 
 const app = express();
 app.use(cors());
@@ -10,6 +12,7 @@ app.use(express.json());
 app.use('/auth', require('./routes/auth'));
 app.use('/habits', require('./routes/habits'));
 app.use('/', require('./routes/reminders'));
+app.get('/stats', requireAuth, getUserStatsHandler);
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
