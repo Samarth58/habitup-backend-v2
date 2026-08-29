@@ -16,6 +16,16 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// ─── Root ─────────────────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+    res.json({
+        name: 'HabitUp API',
+        version: '1.0.0',
+        docs: '/api-docs',
+        health: '/health',
+    });
+});
+
 // ─── Health Check (registered FIRST to prevent shadowing) ──────────────────────
 app.get('/health', async (req, res) => {
     try {
