@@ -4,10 +4,15 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const { requireAuth } = require('./middleware/authMiddleware');
 const { getUserStatsHandler } = require('./controllers/habitController');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ─── API Docs ─────────────────────────────────────────────────────────────────
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/auth', require('./routes/auth'));
 app.use('/habits', require('./routes/habits'));

@@ -1,6 +1,45 @@
 const crypto = require('crypto');
 const argon2 = require('argon2');
 const { Pool } = require('pg');
+const nodemailer = require('nodemailer');
+
+// TODO: switch to a branded transactional email provider (e.g. Resend) with a verified company domain
+// once available - using Gmail as a temporary sender in the meantime
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
+/**
+ * Sends a password reset email containing the raw token.
+ * Logs and swallows any send error so the caller is not affected.
+ *
+ * @param {string} toEmail  Recipient address (the user's registered email)
+ * @param {string} rawToken Unhashed reset token
+ */
+async function sendPasswordResetEmail(toEmail, rawToken) {
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to: toEmail,
+    subject: 'Reset your HabitUp password',
+    text:
+      `You requested a password reset for your HabitUp account.\n\n` +
+      `Use the token below to reset your password:\n\n` +
+      `  ${rawToken}\n\n` +
+      `This token expires in 15 minutes.\n\n` +
+      `If you did not request a password reset, you can safely ignore this email.`,
+  };
+
+  try {
+    const result = await transporter.sendMail(mailOptions);
+    console.log('[sendPasswordResetEmail] Email sent successfully to:', toEmail, result.messageId);
+  } catch (err) {
+    console.error('[sendPasswordResetEmail] Failed to send reset email:', err);
+  }
+}
 
 
 const pool = new Pool({
@@ -130,16 +169,17 @@ async function findUserById(userId) {
 }
 
 /**
- * Creates a password reset token for a user (15 min expiry) and returns the raw (unhashed) token.
- * Returns null if user is not found.
+ * Creates a password reset token for a user (15 min expiry) and emails the
+ * raw token to the user's registered address. Returns without error whether
+ * or not the user exists (prevents email enumeration).
  *
  * @param {string} email
- * @returns {Promise<string|null>} Raw unhashed token or null if email not found.
+ * @returns {Promise<void>}
  */
 async function createPasswordResetToken(email) {
   const user = await findUserByEmail(email);
   if (!user) {
-    return null;
+    return;
   }
 
   const rawToken = crypto.randomBytes(32).toString('hex');
@@ -152,7 +192,7 @@ async function createPasswordResetToken(email) {
     [user.id, tokenHash, expiresAt]
   );
 
-  return rawToken;
+  await sendPasswordResetEmail(user.email, rawToken);
 }
 
 /**

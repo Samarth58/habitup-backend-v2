@@ -245,7 +245,7 @@ async function getMe(req, res) {
  * Body: { email }
  *
  * Always returns a generic message to prevent email enumeration.
- * For MVP/dev testing without an email service, devToken is included in the response.
+ * A password reset email is sent via Gmail SMTP to the user's registered address.
  */
 async function requestPasswordReset(req, res) {
   const { email } = req.body;
@@ -255,12 +255,10 @@ async function requestPasswordReset(req, res) {
   }
 
   try {
-    const devToken = await createPasswordResetToken(email);
+    await createPasswordResetToken(email);
 
     return res.json({
       message: 'If that email exists, a password reset link has been sent.',
-      // DEV-ONLY SHORTCUT: Included for MVP testing until email delivery service is configured. Remove in production!
-      devToken: devToken ?? undefined,
     });
   } catch (err) {
     console.error('[requestPasswordReset]', err);

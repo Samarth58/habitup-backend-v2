@@ -1,6 +1,12 @@
 /**
  * Test script for verifying password reset workflow.
- * 
+ *
+ * NOTE: Email delivery is now handled via real Gmail SMTP (nodemailer).
+ * The reset token is emailed to the user's registered address — there is no sandbox
+ * restriction on the recipient, so you can use ANY real email address you own.
+ * After running Step 3, check the inbox of whatever email you registered with
+ * to obtain the token, then supply it to Step 4 manually if needed.
+ *
  * Usage: node scripts/test-reset-password.js
  */
 
@@ -68,7 +74,9 @@ async function runTests() {
   }
 
   // Step 3: Request password reset
-  let devToken;
+  // The server will email the reset token to the registered address via Gmail SMTP.
+  // No token is returned in the API response (prevents token leakage).
+  // To verify end-to-end delivery, check the inbox of the address used above.
   try {
     const res = await fetch(`${BASE_URL}/auth/reset-password/request`, {
       method: 'POST',
@@ -77,14 +85,15 @@ async function runTests() {
     });
 
     const data = await res.json();
-    if (!res.ok || !data.devToken) {
+    if (!res.ok || !data.message) {
       console.error('[FAIL] Step 3: Request reset password failed.', data);
       process.exitCode = 1;
       return;
     }
 
-    devToken = data.devToken;
-    console.log(`[PASS] Step 3: Requested password reset. Received devToken: ${devToken.slice(0, 10)}...`);
+    console.log(`[PASS] Step 3: Password reset requested. Generic message received (no token in response).`);
+    console.log(`       → To verify email delivery, check the inbox for ${uniqueEmail}.`);
+    console.log(`       → This script cannot auto-confirm Step 4 without retrieving the emailed token.`);
   } catch (err) {
     console.error('[FAIL] Step 3: Exception during request reset password.', err.message);
     process.exitCode = 1;
@@ -92,6 +101,17 @@ async function runTests() {
   }
 
   // Step 4: Confirm password reset with new password
+  // IMPORTANT: Obtain the reset token from the email sent to uniqueEmail above.
+  // This step requires manual intervention — pass the token via RESET_TOKEN env var:
+  //   RESET_TOKEN=<token_from_email> node scripts/test-reset-password.js
+  const manualToken = process.env.RESET_TOKEN;
+  if (!manualToken) {
+    console.log('\n[SKIP] Step 4–7: Set RESET_TOKEN=<token_from_email> to continue automated testing.');
+    console.log('       Retrieve the token from the inbox and re-run with RESET_TOKEN set.');
+    return;
+  }
+
+  const devToken = manualToken;
   try {
     const res = await fetch(`${BASE_URL}/auth/reset-password/confirm`, {
       method: 'POST',
