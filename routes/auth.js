@@ -10,6 +10,7 @@ const {
   confirmPasswordReset,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
 
 const router = Router();
 
@@ -52,7 +53,7 @@ const router = Router();
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/register', register);
+router.post('/register', authLimiter, register);
 
 /**
  * @swagger
@@ -92,7 +93,7 @@ router.post('/register', register);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/login', login);
+router.post('/login', authLimiter, login);
 
 /**
  * @swagger
@@ -253,7 +254,7 @@ router.get('/me', requireAuth, getMe);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/reset-password/request', requestPasswordReset);
+router.post('/reset-password/request', passwordResetLimiter, requestPasswordReset);
 
 /**
  * @swagger

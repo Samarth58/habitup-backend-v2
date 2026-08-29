@@ -3,8 +3,7 @@ const argon2 = require('argon2');
 const { Pool } = require('pg');
 const nodemailer = require('nodemailer');
 
-// TODO: switch to a branded transactional email provider (e.g. Resend) with a verified company domain
-// once available - using Gmail as a temporary sender in the meantime
+// Using Gmail as the active email sender until a company domain is verified with Resend (see resend integration in git history for reference) - Gmail has no recipient restriction and works for any real user's email address today
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
