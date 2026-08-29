@@ -15,6 +15,10 @@ const {
   getHabitStatsHandler,
   getUserStatsHandler,
 } = require('../controllers/habitController');
+const {
+  createReminder,
+  listReminders,
+} = require('../controllers/reminderController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = Router();

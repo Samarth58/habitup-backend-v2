@@ -148,7 +148,7 @@ router.get('/habits/:habitId/reminders', listReminders);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/reminders/:id', updateReminder);
+router.patch('/:id', updateReminder);
 
 /**
  * @swagger
@@ -184,6 +184,6 @@ router.patch('/reminders/:id', updateReminder);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/reminders/:id', deleteReminder);
+router.delete('/:id', deleteReminder);
 
 module.exports = router;
