@@ -4,6 +4,7 @@ const {
   deleteReminder,
 } = require('../controllers/reminderController');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { validateUuid } = require('../middleware/validateUuid');
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.use(requireAuth);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id', updateReminder);
+router.patch('/:id', validateUuid('id'), updateReminder);
 
 /**
  * @swagger
@@ -94,6 +95,6 @@ router.patch('/:id', updateReminder);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id', deleteReminder);
+router.delete('/:id', validateUuid('id'), deleteReminder);
 
 module.exports = router;
