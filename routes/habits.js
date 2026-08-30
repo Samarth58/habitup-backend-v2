@@ -23,19 +23,6 @@ const { requireAuth } = require('../middleware/authMiddleware');
 const { validateUuid } = require('../middleware/validateUuid');
 
 const router = Router();
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function validateUuid(paramName) {
-  return (req, res, next) => {
-    const value = req.params[paramName];
-
-    if (!value || !UUID_PATTERN.test(value)) {
-      return res.status(400).json({ error: `Invalid ${paramName} UUID.` });
-    }
-
-    next();
-  };
-}
 
 // Protect all habit endpoints with auth middleware
 router.use(requireAuth);
