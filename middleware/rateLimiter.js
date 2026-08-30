@@ -1,12 +1,15 @@
 const rateLimit = require('express-rate-limit');
 
+const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX) || 10;
+const PASSWORD_RESET_RATE_LIMIT_MAX = Number(process.env.PASSWORD_RESET_RATE_LIMIT_MAX) || 3;
+
 /**
  * Rate limiter for authentication endpoints (login and register).
- * Max 10 requests per 15 minutes per IP.
+ * Defaults to 10 requests per 15 minutes per IP to preserve production behavior.
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10,
+  max: AUTH_RATE_LIMIT_MAX,
   message: { error: 'Too many attempts. Please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -14,11 +17,11 @@ const authLimiter = rateLimit({
 
 /**
  * Stricter rate limiter for password reset requests to prevent email spam.
- * Max 3 requests per 15 minutes per IP.
+ * Defaults to 3 requests per 15 minutes per IP to preserve production behavior.
  */
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3,
+  max: PASSWORD_RESET_RATE_LIMIT_MAX,
   message: { error: 'Too many password reset requests. Please try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,

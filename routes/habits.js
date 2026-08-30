@@ -22,6 +22,19 @@ const {
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = Router();
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function validateUuid(paramName) {
+  return (req, res, next) => {
+    const value = req.params[paramName];
+
+    if (!value || !UUID_PATTERN.test(value)) {
+      return res.status(400).json({ error: `Invalid ${paramName} UUID.` });
+    }
+
+    next();
+  };
+}
 
 // Protect all habit endpoints with auth middleware
 router.use(requireAuth);
@@ -196,7 +209,7 @@ router.get('/stats', getUserStatsHandler);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/:id/stats', getHabitStatsHandler);
+router.get('/:id/stats', validateUuid('id'), getHabitStatsHandler);
 
 /**
  * @swagger
@@ -232,7 +245,7 @@ router.get('/:id/stats', getHabitStatsHandler);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/:id', getHabit);
+router.get('/:id', validateUuid('id'), getHabit);
 
 /**
  * @swagger
@@ -289,7 +302,7 @@ router.get('/:id', getHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id', updateHabit);
+router.patch('/:id', validateUuid('id'), updateHabit);
 
 /**
  * @swagger
@@ -325,7 +338,7 @@ router.patch('/:id', updateHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id', deleteHabit);
+router.delete('/:id', validateUuid('id'), deleteHabit);
 
 /**
  * @swagger
@@ -361,7 +374,7 @@ router.delete('/:id', deleteHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/pause', pauseHabit);
+router.patch('/:id/pause', validateUuid('id'), pauseHabit);
 
 /**
  * @swagger
@@ -397,7 +410,7 @@ router.patch('/:id/pause', pauseHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/unpause', unpauseHabit);
+router.patch('/:id/unpause', validateUuid('id'), unpauseHabit);
 
 /**
  * @swagger
@@ -433,7 +446,7 @@ router.patch('/:id/unpause', unpauseHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/archive', archiveHabit);
+router.patch('/:id/archive', validateUuid('id'), archiveHabit);
 
 /**
  * @swagger
@@ -469,7 +482,7 @@ router.patch('/:id/archive', archiveHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/unarchive', unarchiveHabit);
+router.patch('/:id/unarchive', validateUuid('id'), unarchiveHabit);
 
 /**
  * @swagger
@@ -512,7 +525,7 @@ router.patch('/:id/unarchive', unarchiveHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/:id/completions', addHabitCompletion);
+router.post('/:id/completions', validateUuid('id'), addHabitCompletion);
 
 /**
  * @swagger
@@ -554,7 +567,7 @@ router.post('/:id/completions', addHabitCompletion);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id/completions/:date', removeHabitCompletion);
+router.delete('/:id/completions/:date', validateUuid('id'), removeHabitCompletion);
 
 /**
  * @swagger
@@ -604,7 +617,7 @@ router.delete('/:id/completions/:date', removeHabitCompletion);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/:habitId/reminders', createReminder);
+router.post('/:habitId/reminders', validateUuid('habitId'), createReminder);
 
 /**
  * @swagger
@@ -642,6 +655,6 @@ router.post('/:habitId/reminders', createReminder);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/:habitId/reminders', listReminders);
+router.get('/:habitId/reminders', validateUuid('habitId'), listReminders);
 
 module.exports = router;

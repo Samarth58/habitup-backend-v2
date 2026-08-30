@@ -147,7 +147,12 @@ async function refresh(req, res) {
     // Rotate: revoke the matched session, create a fresh one
     await revokeSession(session.id);
 
-    const newAccessToken               = signAccessToken(userId);
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(401).json({ error: 'Session not found or already revoked.' });
+    }
+
+    const newAccessToken               = signAccessToken(userId, user.email);
     const { token: newRefreshToken, jti: newJti } = signRefreshToken(userId);
     const newHash    = await argon2.hash(newJti);
     const expiresAt  = new Date(Date.now() + REFRESH_EXPIRY_MS);
