@@ -20,6 +20,7 @@ const {
   listReminders,
 } = require('../controllers/reminderController');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { validateUuid } = require('../middleware/validateUuid');
 
 const router = Router();
 
@@ -196,7 +197,7 @@ router.get('/stats', getUserStatsHandler);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/:id/stats', getHabitStatsHandler);
+router.get('/:id/stats', validateUuid('id'), getHabitStatsHandler);
 
 /**
  * @swagger
@@ -232,7 +233,7 @@ router.get('/:id/stats', getHabitStatsHandler);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.get('/:id', getHabit);
+router.get('/:id', validateUuid('id'), getHabit);
 
 /**
  * @swagger
@@ -289,7 +290,7 @@ router.get('/:id', getHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id', updateHabit);
+router.patch('/:id', validateUuid('id'), updateHabit);
 
 /**
  * @swagger
@@ -325,7 +326,7 @@ router.patch('/:id', updateHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id', deleteHabit);
+router.delete('/:id', validateUuid('id'), deleteHabit);
 
 /**
  * @swagger
@@ -361,7 +362,7 @@ router.delete('/:id', deleteHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/pause', pauseHabit);
+router.patch('/:id/pause', validateUuid('id'), pauseHabit);
 
 /**
  * @swagger
@@ -397,7 +398,7 @@ router.patch('/:id/pause', pauseHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/unpause', unpauseHabit);
+router.patch('/:id/unpause', validateUuid('id'), unpauseHabit);
 
 /**
  * @swagger
@@ -433,7 +434,7 @@ router.patch('/:id/unpause', unpauseHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/archive', archiveHabit);
+router.patch('/:id/archive', validateUuid('id'), archiveHabit);
 
 /**
  * @swagger
@@ -469,7 +470,7 @@ router.patch('/:id/archive', archiveHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id/unarchive', unarchiveHabit);
+router.patch('/:id/unarchive', validateUuid('id'), unarchiveHabit);
 
 /**
  * @swagger
@@ -512,7 +513,7 @@ router.patch('/:id/unarchive', unarchiveHabit);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.post('/:id/completions', addHabitCompletion);
+router.post('/:id/completions', validateUuid('id'), addHabitCompletion);
 
 /**
  * @swagger
@@ -554,6 +555,95 @@ router.post('/:id/completions', addHabitCompletion);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id/completions/:date', removeHabitCompletion);
+router.delete('/:id/completions/:date', validateUuid('id'), removeHabitCompletion);
+
+/**
+ * @swagger
+ * /habits/{habitId}/reminders:
+ *   post:
+ *     tags: [Reminders]
+ *     summary: Create a reminder for a habit
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: habitId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Habit ID to attach the reminder to
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [time]
+ *             properties:
+ *               time: { type: string, example: '07:30', description: 'HH:MM in 24-hour format' }
+ *     responses:
+ *       201:
+ *         description: Reminder created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reminder: { $ref: '#/components/schemas/Reminder' }
+ *       400:
+ *         description: time field missing
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       404:
+ *         description: Habit not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.post('/:habitId/reminders', validateUuid('habitId'), createReminder);
+
+/**
+ * @swagger
+ * /habits/{habitId}/reminders:
+ *   get:
+ *     tags: [Reminders]
+ *     summary: List all reminders for a habit
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: habitId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Habit ID
+ *     responses:
+ *       200:
+ *         description: Array of reminders
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 reminders:
+ *                   type: array
+ *                   items: { $ref: '#/components/schemas/Reminder' }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       404:
+ *         description: Habit not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.get('/:habitId/reminders', validateUuid('habitId'), listReminders);
 
 module.exports = router;
+

@@ -1,104 +1,15 @@
 const { Router } = require('express');
 const {
-  createReminder,
-  listReminders,
   updateReminder,
   deleteReminder,
 } = require('../controllers/reminderController');
 const { requireAuth } = require('../middleware/authMiddleware');
+const { validateUuid } = require('../middleware/validateUuid');
 
 const router = Router();
 
 // Protect all reminder endpoints with auth middleware
 router.use(requireAuth);
-
-/**
- * @swagger
- * /habits/{habitId}/reminders:
- *   post:
- *     tags: [Reminders]
- *     summary: Create a reminder for a habit
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: habitId
- *         required: true
- *         schema: { type: string, format: uuid }
- *         description: Habit ID to attach the reminder to
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [time]
- *             properties:
- *               time: { type: string, example: '07:30', description: 'HH:MM in 24-hour format' }
- *     responses:
- *       201:
- *         description: Reminder created
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 reminder: { $ref: '#/components/schemas/Reminder' }
- *       400:
- *         description: time field missing
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- *       404:
- *         description: Habit not found
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- */
-router.post('/habits/:habitId/reminders', createReminder);
-
-/**
- * @swagger
- * /habits/{habitId}/reminders:
- *   get:
- *     tags: [Reminders]
- *     summary: List all reminders for a habit
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: habitId
- *         required: true
- *         schema: { type: string, format: uuid }
- *         description: Habit ID
- *     responses:
- *       200:
- *         description: Array of reminders
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 reminders:
- *                   type: array
- *                   items: { $ref: '#/components/schemas/Reminder' }
- *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- *       404:
- *         description: Habit not found
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/Error' }
- */
-router.get('/habits/:habitId/reminders', listReminders);
 
 /**
  * @swagger
@@ -148,7 +59,7 @@ router.get('/habits/:habitId/reminders', listReminders);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.patch('/:id', updateReminder);
+router.patch('/:id', validateUuid('id'), updateReminder);
 
 /**
  * @swagger
@@ -184,6 +95,6 @@ router.patch('/:id', updateReminder);
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  */
-router.delete('/:id', deleteReminder);
+router.delete('/:id', validateUuid('id'), deleteReminder);
 
 module.exports = router;
