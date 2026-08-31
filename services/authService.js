@@ -1,43 +1,79 @@
 const crypto = require('crypto');
 const argon2 = require('argon2');
 const { Pool } = require('pg');
+const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-// Using Gmail as the active email sender until a company domain is verified with Resend (see resend integration in git history for reference) - Gmail has no recipient restriction and works for any real user's email address today
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// Primary: Resend HTTP API client.
+// Cloud container platforms like Railway block outbound raw SMTP ports (25, 465, 587)
+// to prevent spam abuse, causing ETIMEDOUT / ENETUNREACH errors with nodemailer/Gmail.
+// Resend uses standard HTTPS (port 443) REST calls which are unrestricted.
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
+// Secondary / Local Fallback: Gmail SMTP via nodemailer.
+// Useful for local development where raw outbound SMTP ports are not blocked.
+const gmailTransporter = (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    })
+  : null;
 
 /**
  * Sends a password reset email containing the raw token.
+ * Uses Resend HTTP API in production to avoid cloud platform SMTP blocks (e.g. Railway).
+ * Falls back to Gmail SMTP for local development if Resend is not configured.
  * Logs and swallows any send error so the caller is not affected.
  *
  * @param {string} toEmail  Recipient address (the user's registered email)
  * @param {string} rawToken Unhashed reset token
  */
 async function sendPasswordResetEmail(toEmail, rawToken) {
-  const mailOptions = {
-    from: process.env.GMAIL_USER,
-    to: toEmail,
-    subject: 'Reset your HabitUp password',
-    text:
-      `You requested a password reset for your HabitUp account.\n\n` +
-      `Use the token below to reset your password:\n\n` +
-      `  ${rawToken}\n\n` +
-      `This token expires in 15 minutes.\n\n` +
-      `If you did not request a password reset, you can safely ignore this email.`,
-  };
+  const subject = 'Reset your HabitUp password';
+  const text =
+    `You requested a password reset for your HabitUp account.\n\n` +
+    `Use the token below to reset your password:\n\n` +
+    `  ${rawToken}\n\n` +
+    `This token expires in 15 minutes.\n\n` +
+    `If you did not request a password reset, you can safely ignore this email.`;
 
-  try {
-    const result = await transporter.sendMail(mailOptions);
-    console.log('[sendPasswordResetEmail] Email sent successfully to:', toEmail, result.messageId);
-  } catch (err) {
-    console.error('[sendPasswordResetEmail] Failed to send reset email:', err);
+  // 1. Primary: Try Resend HTTP API
+  if (resend) {
+    try {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || 'HabitUp <onboarding@resend.dev>';
+      const result = await resend.emails.send({
+        from: fromEmail,
+        to: toEmail,
+        subject,
+        text,
+      });
+      console.log('[sendPasswordResetEmail] Email dispatched via Resend to:', toEmail, result.data?.id || result);
+      return;
+    } catch (err) {
+      console.error('[sendPasswordResetEmail] Failed to send reset email via Resend:', err);
+    }
   }
+
+  // 2. Fallback: Try Gmail SMTP (Local dev only)
+  if (gmailTransporter) {
+    try {
+      const result = await gmailTransporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: toEmail,
+        subject,
+        text,
+      });
+      console.log('[sendPasswordResetEmail] Email dispatched via Gmail SMTP to:', toEmail, result.messageId);
+      return;
+    } catch (err) {
+      console.error('[sendPasswordResetEmail] Failed to send reset email via Gmail SMTP:', err);
+    }
+  }
+
+  console.warn('[sendPasswordResetEmail] No email provider configured (missing RESEND_API_KEY and GMAIL_USER).');
 }
 
 

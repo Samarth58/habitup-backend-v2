@@ -11,7 +11,7 @@ A Node.js/Express/PostgreSQL backend for HabitUp, a daily habit tracker mobile a
 - **Database Access**: Raw `pg` queries (no ORM)
 - **Migrations**: `node-pg-migrate`
 - **Authentication**: JWT (JSON Web Tokens) with access & refresh token rotation, Argon2id password hashing
-- **Email Service**: Nodemailer with Gmail SMTP (with Resend integration ready for production domain verification)
+- **Email Service**: Resend HTTP API (primary for production cloud environments), Nodemailer with Gmail SMTP (local development fallback)
 - **API Documentation**: Swagger / OpenAPI 3.0 (`swagger-ui-express`, `swagger-jsdoc`)
 - **Rate Limiting**: `express-rate-limit`
 
@@ -177,8 +177,7 @@ node scripts/test-rate-limit.js
 
 ## Known Limitations
 
-- **Email Sender**: Password reset emails are currently dispatched via a personal Gmail SMTP account as an interim solution. Migration to a verified company domain via Resend will take place once domain verification is finalized.
-- **Gmail Deliverability**: Deliverability when sending from Gmail to another Gmail address can occasionally be delayed or filtered by Google's internal spam policies; delivery to non-Gmail domains (Outlook, Yahoo, custom domains) is confirmed reliable.
+- **Email Delivery in Cloud / Railway**: Cloud platforms like Railway block outbound raw SMTP ports (25, 465, 587) to prevent spam abuse. Password reset emails in production are dispatched via Resend's HTTPS API (`https://api.resend.com`). In free sandbox mode, Resend allows sending to the account owner's email address; verifying a custom domain DNS in the Resend dashboard unlocks delivery to all recipient domains. Gmail SMTP remains available as a local development fallback where raw SMTP ports are unblocked.
 - **Cold Starts**: Hosting on free or starter tiers (Render/Railway) may introduce initial cold-start delays on the first request after periods of inactivity.
 
 ---
