@@ -64,7 +64,7 @@ Create a `.env` file in the root directory based on `.env.example`:
 
 ```env
 PORT=5000
-DATABASE_URL=postgresql://user:password@host:port/dbname?sslmode=require
+DATABASE_URL=postgresql://user:password@host:port/dbname?sslmode=verify-full
 JWT_ACCESS_SECRET=your_jwt_access_secret
 JWT_REFRESH_SECRET=your_jwt_refresh_secret
 GMAIL_USER=your_gmail_address@gmail.com

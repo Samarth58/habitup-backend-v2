@@ -4,14 +4,16 @@ const { Pool } = require('pg');
 const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-// Primary: Resend HTTP API client.
-// Cloud container platforms like Railway block outbound raw SMTP ports (25, 465, 587)
-// to prevent spam abuse, causing ETIMEDOUT / ENETUNREACH errors with nodemailer/Gmail.
-// Resend uses standard HTTPS (port 443) REST calls which are unrestricted.
+// Email Provider Clients:
+// 1. Brevo HTTP API: Unrestricted recipient delivery without requiring a custom domain (uses HTTPS port 443).
+const brevoApiKey = process.env.BREVO_API_KEY;
+const brevoSenderEmail = process.env.BREVO_SENDER_EMAIL || process.env.GMAIL_USER || 'samarthahg2004@gmail.com';
+const brevoSenderName = process.env.BREVO_SENDER_NAME || 'HabitUp';
+
+// 2. Resend HTTP API: Primary when a custom verified domain or account owner address is used.
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Secondary / Local Fallback: Gmail SMTP via nodemailer.
-// Useful for local development where raw outbound SMTP ports are not blocked.
+// 3. Gmail SMTP: Local development fallback.
 const gmailTransporter = (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
   ? nodemailer.createTransport({
       service: 'gmail',
@@ -24,8 +26,10 @@ const gmailTransporter = (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWO
 
 /**
  * Sends a password reset email containing the raw token.
- * Uses Resend HTTP API in production to avoid cloud platform SMTP blocks (e.g. Railway).
- * Falls back to Gmail SMTP for local development if Resend is not configured.
+ * Tries providers in priority order:
+ *   1. Brevo HTTP API (Works in cloud production to any recipient without domain verification)
+ *   2. Resend HTTP API (Works in cloud production for verified domains / account email)
+ *   3. Gmail SMTP (Local development only)
  * Logs and swallows any send error so the caller is not affected.
  *
  * @param {string} toEmail  Recipient address (the user's registered email)
@@ -40,7 +44,40 @@ async function sendPasswordResetEmail(toEmail, rawToken) {
     `This token expires in 15 minutes.\n\n` +
     `If you did not request a password reset, you can safely ignore this email.`;
 
-  // 1. Primary: Try Resend HTTP API
+  // 1. Try Brevo HTTP API (Recommended for arbitrary recipients without custom domain)
+  if (brevoApiKey) {
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoApiKey,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: {
+            name: brevoSenderName,
+            email: brevoSenderEmail,
+          },
+          to: [{ email: toEmail }],
+          subject,
+          textContent: text,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        console.log('[sendPasswordResetEmail] Email dispatched via Brevo to:', toEmail, data.messageId || data);
+        return;
+      } else {
+        console.error('[sendPasswordResetEmail] Brevo API returned error:', data);
+      }
+    } catch (err) {
+      console.error('[sendPasswordResetEmail] Failed to send reset email via Brevo:', err);
+    }
+  }
+
+  // 2. Try Resend HTTP API
   if (resend) {
     try {
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'HabitUp <onboarding@resend.dev>';
@@ -50,14 +87,19 @@ async function sendPasswordResetEmail(toEmail, rawToken) {
         subject,
         text,
       });
-      console.log('[sendPasswordResetEmail] Email dispatched via Resend to:', toEmail, result.data?.id || result);
-      return;
+
+      if (result.error) {
+        console.error('[sendPasswordResetEmail] Resend error:', result.error);
+      } else {
+        console.log('[sendPasswordResetEmail] Email dispatched via Resend to:', toEmail, result.data?.id || result);
+        return;
+      }
     } catch (err) {
       console.error('[sendPasswordResetEmail] Failed to send reset email via Resend:', err);
     }
   }
 
-  // 2. Fallback: Try Gmail SMTP (Local dev only)
+  // 3. Fallback: Try Gmail SMTP (Local dev only)
   if (gmailTransporter) {
     try {
       const result = await gmailTransporter.sendMail({
@@ -73,7 +115,7 @@ async function sendPasswordResetEmail(toEmail, rawToken) {
     }
   }
 
-  console.warn('[sendPasswordResetEmail] No email provider configured (missing RESEND_API_KEY and GMAIL_USER).');
+  console.warn('[sendPasswordResetEmail] No email provider configured or all providers failed.');
 }
 
 
