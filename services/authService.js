@@ -151,7 +151,7 @@ async function findUserByEmail(email) {
   const { rows } = await pool.query(
     `SELECT id, name, email, password_hash, timezone, created_at
      FROM users
-     WHERE email = $1`,
+     WHERE email = $1 AND deleted_at IS NULL`,
     [email]
   );
   return rows[0] ?? null;
@@ -239,7 +239,7 @@ async function findUserById(userId) {
   const { rows } = await pool.query(
     `SELECT id, name, email, timezone, created_at
      FROM users
-     WHERE id = $1`,
+     WHERE id = $1 AND deleted_at IS NULL`,
     [userId]
   );
   return rows[0] ?? null;
@@ -316,6 +316,49 @@ async function resetPassword(rawToken, newPassword) {
   return true;
 }
 
+/**
+ * Deletes a user account after re-verifying password.
+ * Soft-deletes the user, scrambles/anonymizes email to free the unique constraint,
+ * and revokes all active sessions.
+ *
+ * @param {string} userId
+ * @param {string} password
+ * @returns {Promise<boolean>} True on success, false if password doesn't match or user not found.
+ */
+async function deleteUserAccount(userId, password) {
+  const { rows } = await pool.query(
+    `SELECT id, email, password_hash
+     FROM users
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [userId]
+  );
+
+  const user = rows[0];
+  if (!user) {
+    return false;
+  }
+
+  const valid = await argon2.verify(user.password_hash, password);
+  if (!valid) {
+    return false;
+  }
+
+  const anonymizedEmail = `${user.email}_deleted_${Date.now()}`;
+
+  await pool.query(
+    `UPDATE users
+     SET deleted_at = NOW(),
+         email = $1,
+         updated_at = NOW()
+     WHERE id = $2`,
+    [anonymizedEmail, userId]
+  );
+
+  await revokeAllSessionsForUser(userId);
+
+  return true;
+}
+
 module.exports = {
   createUser,
   findUserByEmail,
@@ -326,4 +369,5 @@ module.exports = {
   revokeAllSessionsForUser,
   createPasswordResetToken,
   resetPassword,
+  deleteUserAccount,
 };

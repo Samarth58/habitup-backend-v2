@@ -11,6 +11,7 @@ const {
   revokeAllSessionsForUser,
   createPasswordResetToken,
   resetPassword,
+  deleteUserAccount,
 } = require('../services/authService');
 
 
@@ -297,6 +298,35 @@ async function confirmPasswordReset(req, res) {
   }
 }
 
+/**
+ * DELETE /auth/account
+ * Header: Authorization: Bearer <accessToken>
+ * Body: { password }
+ *
+ * Permanently soft-deletes the authenticated user's account, anonymizes
+ * email, and revokes all active sessions. Requires password confirmation.
+ */
+async function deleteAccount(req, res) {
+  const userId = req.userId;
+  const { password } = req.body;
+
+  if (!password) {
+    return res.status(400).json({ error: 'password is required.' });
+  }
+
+  try {
+    const success = await deleteUserAccount(userId, password);
+    if (!success) {
+      return res.status(401).json({ error: 'Incorrect password.' });
+    }
+
+    return res.json({ message: 'Account deleted successfully.' });
+  } catch (err) {
+    console.error('[deleteAccount]', err);
+    return res.status(500).json({ error: 'Failed to delete account.' });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -306,6 +336,7 @@ module.exports = {
   getMe,
   requestPasswordReset,
   confirmPasswordReset,
+  deleteAccount,
 };
 
 

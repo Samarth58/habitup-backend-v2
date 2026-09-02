@@ -8,6 +8,7 @@ const {
   getMe,
   requestPasswordReset,
   confirmPasswordReset,
+  deleteAccount,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
@@ -291,5 +292,47 @@ router.post('/reset-password/request', passwordResetLimiter, requestPasswordRese
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.post('/reset-password/confirm', confirmPasswordReset);
+
+/**
+ * @swagger
+ * /auth/account:
+ *   delete:
+ *     tags: [Auth]
+ *     summary: Delete user account
+ *     description: >
+ *       Soft-deletes the authenticated user's account, anonymizes their email,
+ *       and revokes all active sessions. Requires password confirmation.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password: { type: string, example: mySecretPass123 }
+ *     responses:
+ *       200:
+ *         description: Account deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message: { type: string, example: Account deleted successfully. }
+ *       400:
+ *         description: password field missing
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: Missing/invalid token or incorrect password
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.delete('/account', requireAuth, deleteAccount);
 
 module.exports = router;
