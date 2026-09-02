@@ -139,7 +139,18 @@ async function createUser({ name, email, password, timezone }) {
      RETURNING id, name, email, timezone, created_at`,
     [name, email, password_hash, timezone]
   );
-  return rows[0];
+  const user = rows[0];
+
+  try {
+    const { logActivity } = require('./activityService');
+    logActivity(user.id, 'REGISTER', {}).catch((err) =>
+      console.error('[authService] Failed to log REGISTER:', err)
+    );
+  } catch (err) {
+    console.error('[authService] logActivity require failed:', err);
+  }
+
+  return user;
 }
 
 /**
@@ -251,12 +262,12 @@ async function findUserById(userId) {
  * or not the user exists (prevents email enumeration).
  *
  * @param {string} email
- * @returns {Promise<void>}
+ * @returns {Promise<string|null>} Returns userId if user exists, or null.
  */
 async function createPasswordResetToken(email) {
   const user = await findUserByEmail(email);
   if (!user) {
-    return;
+    return null;
   }
 
   const rawToken = crypto.randomBytes(32).toString('hex');
@@ -270,6 +281,16 @@ async function createPasswordResetToken(email) {
   );
 
   await sendPasswordResetEmail(user.email, rawToken);
+  return user.id;
+}
+
+async function updateSessionLastUsedAt(sessionId, userId) {
+  const { rowCount } = await pool.query(
+    `UPDATE sessions SET last_used_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL AND expires_at > NOW()`,
+    [sessionId, userId]
+  );
+  return rowCount > 0;
 }
 
 /**
@@ -313,6 +334,13 @@ async function resetPassword(rawToken, newPassword) {
 
   await revokeAllSessionsForUser(matchedToken.user_id);
 
+  try {
+    const { logActivity } = require('./activityService');
+    await logActivity(matchedToken.user_id, 'PASSWORD_RESET_COMPLETED', {});
+  } catch (err) {
+    console.error('[authService] Failed to log PASSWORD_RESET_COMPLETED:', err);
+  }
+
   return true;
 }
 
@@ -343,6 +371,13 @@ async function deleteUserAccount(userId, password) {
     return false;
   }
 
+  try {
+    const { logActivity } = require('./activityService');
+    await logActivity(userId, 'ACCOUNT_DELETED', {});
+  } catch (err) {
+    console.error('[authService] Failed to log ACCOUNT_DELETED:', err);
+  }
+
   const anonymizedEmail = `${user.email}_deleted_${Date.now()}`;
 
   await pool.query(
@@ -370,4 +405,5 @@ module.exports = {
   createPasswordResetToken,
   resetPassword,
   deleteUserAccount,
+  updateSessionLastUsedAt,
 };

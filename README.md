@@ -70,6 +70,8 @@ JWT_REFRESH_SECRET=your_jwt_refresh_secret
 GMAIL_USER=your_gmail_address@gmail.com
 GMAIL_APP_PASSWORD=your_gmail_app_password
 RESEND_API_KEY=your_resend_api_key
+MAX_SESSION_GAP_MINUTES=120
+HEARTBEAT_RATE_LIMIT_MAX=60
 ```
 
 #### Variable Descriptions:
@@ -80,6 +82,8 @@ RESEND_API_KEY=your_resend_api_key
 - `GMAIL_USER`: Gmail address used to dispatch transactional emails (e.g. password resets).
 - `GMAIL_APP_PASSWORD`: Google App Password generated for SMTP authentication.
 - `RESEND_API_KEY`: API key for Resend email service (for future company domain migration).
+- `MAX_SESSION_GAP_MINUTES`: Maximum duration counted for each estimated admin usage interval (default `120`).
+- `HEARTBEAT_RATE_LIMIT_MAX`: Heartbeat requests allowed per IP in 15 minutes (default `60`).
 
 ### Running Migrations
 
@@ -88,6 +92,8 @@ Apply database migrations using `node-pg-migrate`:
 ```bash
 npm run migrate up
 ```
+
+The admin dashboard migrations add user roles, activity history, and session heartbeat timestamps. Promote an active user with `node scripts/make-admin.js user@example.com` after migrations.
 
 ### Running the Server
 

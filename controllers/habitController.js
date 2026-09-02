@@ -18,6 +18,7 @@ const {
 } = require('../services/habitService');
 const { calculateStreak } = require('../services/streakService');
 const { getHabitStats, getUserOverallStats } = require('../services/statsService');
+const logActivity = (...args) => require('../services/activityService').logActivity(...args);
 
 /**
  * POST /habits
@@ -45,6 +46,7 @@ async function createHabit(req, res) {
     }
 
     const schedule = await getHabitSchedule(habit.id);
+    logActivity(userId, 'HABIT_CREATED', { habit_id: habit.id }, req).catch((err) => console.error('[habit activity]', err));
     return res.status(201).json({ habit: { ...habit, schedule, streak: 0 } });
   } catch (err) {
     console.error('[createHabit]', err);
@@ -149,6 +151,7 @@ async function updateHabit(req, res) {
 
     if (Object.keys(fields).length > 0) {
       habit = await updateHabitService(userId, habitId, fields);
+      logActivity(userId, 'HABIT_UPDATED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     }
 
     if (Array.isArray(days)) {
@@ -180,6 +183,7 @@ async function deleteHabit(req, res) {
     if (!deleted) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'HABIT_DELETED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     return res.json({ message: 'Habit deleted successfully.' });
   } catch (err) {
     console.error('[deleteHabit]', err);
@@ -200,6 +204,7 @@ async function pauseHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'HABIT_PAUSED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
@@ -225,6 +230,7 @@ async function unpauseHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'HABIT_UNPAUSED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
@@ -250,6 +256,7 @@ async function archiveHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'HABIT_ARCHIVED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
@@ -275,6 +282,7 @@ async function unarchiveHabit(req, res) {
     if (!habit) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'HABIT_UNARCHIVED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const timezone = await getUserTimezone(userId, req.user?.timezone);
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
@@ -303,6 +311,7 @@ async function addHabitCompletion(req, res) {
 
     const timezone = await getUserTimezone(userId, req.user?.timezone);
     const completion = await addCompletion(userId, habitId, timezone);
+    logActivity(userId, 'HABIT_COMPLETED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
     const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
@@ -334,6 +343,7 @@ async function removeHabitCompletion(req, res) {
     if (!removed) {
       return res.status(404).json({ error: 'Completion not found.' });
     }
+    logActivity(userId, 'HABIT_COMPLETION_REMOVED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
 
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);

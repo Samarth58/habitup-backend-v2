@@ -9,9 +9,10 @@ const {
   requestPasswordReset,
   confirmPasswordReset,
   deleteAccount,
+  heartbeat,
 } = require('../controllers/authController');
 const { requireAuth } = require('../middleware/authMiddleware');
-const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, passwordResetLimiter, heartbeatLimiter } = require('../middleware/rateLimiter');
 
 const router = Router();
 
@@ -193,6 +194,30 @@ router.post('/logout-all', requireAuth, logoutAll);
 
 /**
  * @swagger
+ * /auth/session/heartbeat:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Record activity for the authenticated refresh session
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: string }
+ *     responses:
+ *       200: { description: Session activity recorded }
+ *       400: { description: Invalid or missing refresh token }
+ *       404: { description: Session missing or revoked }
+ */
+router.post('/session/heartbeat', requireAuth, heartbeatLimiter, heartbeat);
+
+/**
+ * @swagger
  * /auth/me:
  *   get:
  *     tags: [Auth]
@@ -335,4 +360,42 @@ router.post('/reset-password/confirm', confirmPasswordReset);
  */
 router.delete('/account', requireAuth, deleteAccount);
 
+/**
+ * @swagger
+ * /auth/session/heartbeat:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Send session activity heartbeat
+ *     description: Updates last_used_at timestamp on the active session identified by the refresh token.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: string }
+ *     responses:
+ *       200:
+ *         description: Heartbeat recorded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean, example: true }
+ *                 message: { type: string, example: Session heartbeat recorded. }
+ *       400:
+ *         description: refreshToken missing or invalid
+ *       401:
+ *         description: Missing/invalid access token
+ *       404:
+ *         description: Session not found or revoked
+ */
+router.post('/session/heartbeat', requireAuth, heartbeatLimiter, heartbeat);
+
 module.exports = router;
+

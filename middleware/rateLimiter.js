@@ -2,6 +2,7 @@ const rateLimit = require('express-rate-limit');
 
 const AUTH_RATE_LIMIT_MAX = Number(process.env.AUTH_RATE_LIMIT_MAX) || 10;
 const PASSWORD_RESET_RATE_LIMIT_MAX = Number(process.env.PASSWORD_RESET_RATE_LIMIT_MAX) || 3;
+const HEARTBEAT_RATE_LIMIT_MAX = Number(process.env.HEARTBEAT_RATE_LIMIT_MAX) || 60;
 
 /**
  * Rate limiter for authentication endpoints (login and register).
@@ -27,7 +28,16 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const heartbeatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: HEARTBEAT_RATE_LIMIT_MAX,
+  message: { error: 'Too many heartbeat requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authLimiter,
   passwordResetLimiter,
+  heartbeatLimiter,
 };

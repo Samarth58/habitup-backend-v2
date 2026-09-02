@@ -4,6 +4,7 @@ const {
   updateReminder: updateReminderService,
   deleteReminder: deleteReminderService,
 } = require('../services/reminderService');
+const logActivity = (...args) => require('../services/activityService').logActivity(...args);
 
 /**
  * POST /habits/:habitId/reminders
@@ -23,6 +24,7 @@ async function createReminder(req, res) {
     if (!reminder) {
       return res.status(404).json({ error: 'Habit not found.' });
     }
+    logActivity(userId, 'REMINDER_CREATED', { reminder_id: reminder.id }, req).catch((err) => console.error('[reminder activity]', err));
     return res.status(201).json({ reminder });
   } catch (err) {
     console.error('[createReminder]', err);
@@ -68,6 +70,7 @@ async function updateReminder(req, res) {
     if (!reminder) {
       return res.status(404).json({ error: 'Reminder not found.' });
     }
+    logActivity(userId, 'REMINDER_UPDATED', { reminder_id: reminderId }, req).catch((err) => console.error('[reminder activity]', err));
     return res.json({ reminder });
   } catch (err) {
     console.error('[updateReminder]', err);
@@ -88,6 +91,7 @@ async function deleteReminder(req, res) {
     if (!deleted) {
       return res.status(404).json({ error: 'Reminder not found.' });
     }
+    logActivity(userId, 'REMINDER_DELETED', { reminder_id: reminderId }, req).catch((err) => console.error('[reminder activity]', err));
     return res.json({ message: 'Reminder deleted successfully.' });
   } catch (err) {
     console.error('[deleteReminder]', err);

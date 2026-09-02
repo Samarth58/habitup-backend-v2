@@ -12,6 +12,7 @@ const {
   createPasswordResetToken,
   resetPassword,
   deleteUserAccount,
+  updateSessionLastUsedAt,
 } = require('../services/authService');
 
 
@@ -63,6 +64,7 @@ async function register(req, res) {
     }
 
     const user        = await createUser({ name, email, password, timezone });
+    require('../services/activityService').logActivity(user.id, 'REGISTER', {}, req);
     const accessToken = signAccessToken(user.id, user.email);
 
     return res.status(201).json({ accessToken, user });
@@ -104,6 +106,7 @@ async function login(req, res) {
     const refreshTokenHash = await argon2.hash(jti);
     const expiresAt        = new Date(Date.now() + REFRESH_EXPIRY_MS);
     await createSession(user.id, refreshTokenHash, expiresAt);
+    require('../services/activityService').logActivity(user.id, 'LOGIN', {}, req).catch((err) => console.error('[login activity]', err));
 
     const { password_hash, ...safeUser } = user;
     return res.json({ accessToken, refreshToken, user: safeUser });
@@ -194,6 +197,7 @@ async function logout(req, res) {
     const session = await findActiveSessionByJti(userId, jti);
     if (session) {
       await revokeSession(session.id);
+      require('../services/activityService').logActivity(userId, 'LOGOUT', { session_id: session.id }, req).catch((err) => console.error('[logout activity]', err));
     }
     return res.json({ message: 'Logged out.' });
   } catch (err) {
@@ -217,6 +221,7 @@ async function logoutAll(req, res) {
 
   try {
     await revokeAllSessionsForUser(userId);
+    require('../services/activityService').logActivity(userId, 'LOGOUT_ALL', {}, req).catch((err) => console.error('[logout-all activity]', err));
     return res.json({ message: 'All sessions revoked.' });
   } catch (err) {
     console.error('[logout-all]', err);
@@ -261,7 +266,10 @@ async function requestPasswordReset(req, res) {
   }
 
   try {
-    await createPasswordResetToken(email);
+    const resetUserId = await createPasswordResetToken(email);
+    if (resetUserId) {
+      require('../services/activityService').logActivity(resetUserId, 'PASSWORD_RESET_REQUESTED', {}, req).catch((err) => console.error('[reset request activity]', err));
+    }
 
     return res.json({
       message: 'If that email exists, a password reset link has been sent.',
@@ -290,6 +298,8 @@ async function confirmPasswordReset(req, res) {
     if (!success) {
       return res.status(400).json({ error: 'Invalid, expired, or already used reset token.' });
     }
+
+    require('../services/activityService').logActivity(null, 'PASSWORD_RESET_COMPLETED', {}, req).catch((err) => console.error('[reset complete activity]', err));
 
     return res.json({ message: 'Password has been reset successfully.' });
   } catch (err) {
@@ -320,10 +330,38 @@ async function deleteAccount(req, res) {
       return res.status(401).json({ error: 'Incorrect password.' });
     }
 
+    require('../services/activityService').logActivity(userId, 'ACCOUNT_DELETED', {}, req).catch((err) => console.error('[delete activity]', err));
+
     return res.json({ message: 'Account deleted successfully.' });
   } catch (err) {
     console.error('[deleteAccount]', err);
     return res.status(500).json({ error: 'Failed to delete account.' });
+  }
+}
+
+async function heartbeat(req, res) {
+  const { refreshToken } = req.body || {};
+  if (!refreshToken) return res.status(400).json({ error: 'refreshToken is required.' });
+
+  let payload;
+  try {
+    payload = jwt.verify(refreshToken, REFRESH_SECRET);
+  } catch {
+    return res.status(400).json({ error: 'Invalid or expired refresh token.' });
+  }
+
+  if (payload.sub !== req.userId || !payload.jti) {
+    return res.status(400).json({ error: 'Refresh token does not belong to the authenticated user.' });
+  }
+
+  try {
+    const session = await findActiveSessionByJti(req.userId, payload.jti);
+    if (!session) return res.status(404).json({ error: 'Session not found or revoked.' });
+    await updateSessionLastUsedAt(session.id, req.userId);
+    return res.json({ ok: true, message: 'Session heartbeat recorded.' });
+  } catch (err) {
+    console.error('[heartbeat]', err);
+    return res.status(500).json({ error: 'Failed to update session heartbeat.' });
   }
 }
 
@@ -337,6 +375,7 @@ module.exports = {
   requestPasswordReset,
   confirmPasswordReset,
   deleteAccount,
+  heartbeat,
 };
 
 

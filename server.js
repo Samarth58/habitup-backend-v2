@@ -45,6 +45,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/auth', require('./routes/auth'));
 app.use('/habits', require('./routes/habits'));
 app.use('/reminders', require('./routes/reminders'));
+app.use('/admin', require('./routes/admin'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
 const PORT = process.env.PORT || 5000;
