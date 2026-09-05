@@ -136,7 +136,7 @@ async function createUser({ name, email, password, timezone }) {
   const { rows } = await pool.query(
     `INSERT INTO users (name, email, password_hash, timezone)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, name, email, timezone, created_at`,
+     RETURNING id, name, email, role, timezone, created_at`,
     [name, email, password_hash, timezone]
   );
   const user = rows[0];
@@ -160,7 +160,7 @@ async function createUser({ name, email, password, timezone }) {
  */
 async function findUserByEmail(email) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, password_hash, timezone, created_at
+    `SELECT id, name, email, role, password_hash, timezone, created_at
      FROM users
      WHERE email = $1 AND deleted_at IS NULL`,
     [email]
@@ -248,7 +248,7 @@ async function revokeAllSessionsForUser(userId) {
  */
 async function findUserById(userId) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, timezone, created_at
+    `SELECT id, name, email, role, timezone, created_at
      FROM users
      WHERE id = $1 AND deleted_at IS NULL`,
     [userId]
