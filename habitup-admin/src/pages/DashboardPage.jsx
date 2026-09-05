@@ -35,9 +35,9 @@ export function DashboardPage() {
       {/* Top Filter Bar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">Executive Dashboard</h2>
+          <h2 className="toolbar-title">System Overview</h2>
           <p className="toolbar-subtitle">
-            System health, active user engagement, and core habit tracking metrics
+            High-level metrics across users, habits, check-ins, and session usage
           </p>
         </div>
 
@@ -65,13 +65,10 @@ export function DashboardPage() {
         </div>
       ) : metrics ? (
         <div>
-          {/* Section 1: Core User & Habit KPIs */}
-          <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            User & Habit Engagement
-          </div>
+          {/* Main KPI Grid */}
           <div className="stats-grid">
             <KPICard
-              title="Total Users"
+              title="TOTAL REGISTERED USERS"
               value={metrics.users?.total}
               icon="👥"
               badgeText={`+${metrics.users?.new_in_period || 0} New`}
@@ -79,7 +76,7 @@ export function DashboardPage() {
             />
 
             <KPICard
-              title="Active Users"
+              title="ACTIVE USERS IN PERIOD"
               value={metrics.users?.active_in_period}
               icon="🔥"
               badgeText={`${metrics.users?.deleted_in_period || 0} Deleted`}
@@ -87,7 +84,7 @@ export function DashboardPage() {
             />
 
             <KPICard
-              title="Habits Created"
+              title="TOTAL HABITS CREATED"
               value={metrics.habits?.total}
               icon="🎯"
               badgeText={`+${metrics.habits?.created_in_period || 0} in Period`}
@@ -95,60 +92,57 @@ export function DashboardPage() {
             />
 
             <KPICard
-              title="Habit Completions"
+              title="TOTAL CHECK-INS"
               value={metrics.completions?.total}
               icon="✅"
               badgeText={`+${metrics.completions?.in_period || 0} in Period`}
               badgeType="success"
             />
-          </div>
 
-          {/* Section 2: Reminders & Session Analytics */}
-          <div style={{ marginBottom: '0.75rem', marginTop: '1rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Reminders & Session Duration
-          </div>
-          <div className="stats-grid">
             <KPICard
-              title="Reminders Configured"
+              title="REMINDERS ACTIVE"
               value={metrics.reminders?.total}
               icon="🔔"
-              badgeText="Active"
+              badgeText="Configured"
               badgeType="info"
-            />
-
-            <KPICard
-              title="Total Sessions"
-              value={metrics.sessions?.total_in_period ?? 0}
-              icon="📱"
-              badgeText="In Period"
-              badgeType="primary"
-            />
-
-            <KPICard
-              title="Total Usage Duration"
-              value={formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
-              icon="⏱️"
-              badgeText="Estimated"
-              badgeType="success"
-            />
-
-            <KPICard
-              title="Avg Session Duration"
-              value={formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
-              icon="⚡"
-              badgeText="Per Active User"
-              badgeType="warning"
             />
           </div>
 
-          {/* Usage Context Note */}
-          {metrics.sessions?.usage_note && (
-            <div className="glass-card fade-in" style={{ marginTop: '0.5rem', padding: '1rem 1.25rem' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                📌 <strong>Platform Usage Note:</strong> {metrics.sessions.usage_note}
+          {/* Session Usage Summary Card */}
+          <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-main)' }}>
+              ⏱️ Session & Usage Duration Analytics
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+              <div className="neu-inset-tile">
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL SESSIONS IN PERIOD</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-primary)', marginTop: '0.2rem' }}>
+                  {metrics.sessions?.total_in_period ?? 0}
+                </div>
+              </div>
+
+              <div className="neu-inset-tile">
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED TOTAL USAGE</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-success)', marginTop: '0.2rem' }}>
+                  {formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
+                </div>
+              </div>
+
+              <div className="neu-inset-tile">
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED AVG SESSION</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-warning)', marginTop: '0.2rem' }}>
+                  {formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
+                </div>
               </div>
             </div>
-          )}
+
+            {metrics.sessions?.usage_note && (
+              <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(218, 226, 237, 0.7)', paddingTop: '0.85rem' }}>
+                📌 <strong>Usage Note:</strong> {metrics.sessions.usage_note}
+              </div>
+            )}
+          </div>
         </div>
       ) : null}
     </div>
