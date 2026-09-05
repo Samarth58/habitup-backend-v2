@@ -155,7 +155,8 @@ async function getUsersList({
   const offset = (safePage - 1) * safeLimit;
 
   const conditions = [];
-  const queryParams = [];
+  // $1 is MAX_SESSION_GAP_MINUTES in the CTE below
+  const queryParams = [MAX_SESSION_GAP_MINUTES];
 
   if (email) {
     queryParams.push(`%${email}%`);
@@ -182,6 +183,11 @@ async function getUsersList({
   };
   const sortCol = sortColumnMap[sort] || 'u.created_at';
   const sortOrder = order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+
+  queryParams.push(safeLimit);
+  const limitParamIdx = queryParams.length;
+  queryParams.push(offset);
+  const offsetParamIdx = queryParams.length;
 
   const query = `
     WITH user_stats AS (
@@ -235,10 +241,10 @@ async function getUsersList({
     FROM user_stats u
     ${whereClause}
     ORDER BY ${sortCol} ${sortOrder} NULLS LAST
-    LIMIT $${queryParams.length + 2} OFFSET $${queryParams.length + 3}
+    LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}
   `;
 
-  const { rows } = await pool.query(query, [MAX_SESSION_GAP_MINUTES, ...queryParams, safeLimit, offset]);
+  const { rows } = await pool.query(query, queryParams);
 
   const total = rows.length > 0 ? parseInt(rows[0].total_count, 10) : 0;
   const totalPages = Math.ceil(total / safeLimit) || 1;

@@ -131,13 +131,13 @@ const pool = new Pool({
  * @param {{ name: string, email: string, password: string, timezone: string }} param0
  * @returns {Promise<object>} The created user row (without password_hash).
  */
-async function createUser({ name, email, password, timezone }) {
+async function createUser({ name, email, password, timezone, role = 'user' }) {
   const password_hash = await argon2.hash(password);
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, timezone)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (name, email, password_hash, timezone, role)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, email, role, timezone, created_at`,
-    [name, email, password_hash, timezone]
+    [name, email, password_hash, timezone, role]
   );
   const user = rows[0];
 

@@ -91,6 +91,22 @@ describe('Admin Dashboard API Suite', () => {
       assert.ok(body.users.length <= 1);
     });
 
+    test('7b. User list filtering by role, status, and email functions correctly', async () => {
+      const res1 = await authFetch('/admin/users?role=user&status=active', {}, adminUser.accessToken);
+      assert.equal(res1.status, 200);
+      const body1 = await res1.json();
+      assert.ok(Array.isArray(body1.users));
+
+      const res2 = await authFetch('/admin/users?role=user&status=deleted', {}, adminUser.accessToken);
+      assert.equal(res2.status, 200);
+
+      const targetEmail = regularUser.user?.email || regularUser.email;
+      const res3 = await authFetch(`/admin/users?email=${encodeURIComponent(targetEmail)}&role=user&status=active`, {}, adminUser.accessToken);
+      assert.equal(res3.status, 200);
+      const body3 = await res3.json();
+      assert.ok(body3.users.some(u => u.email.toLowerCase() === targetEmail.toLowerCase()));
+    });
+
     test('8. Admin can fetch single user details', async () => {
       const res = await authFetch(`/admin/users/${regularUser.user.id}`, {}, adminUser.accessToken);
       const body = await res.json();
