@@ -35,9 +35,9 @@ export function DashboardPage() {
       {/* Top Filter Bar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">System Overview</h2>
+          <h2 className="toolbar-title">Executive Dashboard</h2>
           <p className="toolbar-subtitle">
-            High-level metrics across users, habits, check-ins, and session usage
+            System health, active user engagement, and core habit tracking metrics
           </p>
         </div>
 
@@ -65,89 +65,90 @@ export function DashboardPage() {
         </div>
       ) : metrics ? (
         <div>
-          {/* Main KPI Grid */}
+          {/* Section 1: Core User & Habit KPIs */}
+          <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            User & Habit Engagement
+          </div>
           <div className="stats-grid">
             <KPICard
-              title="TOTAL REGISTERED USERS"
+              title="Total Users"
               value={metrics.users?.total}
               icon="👥"
               badgeText={`+${metrics.users?.new_in_period || 0} New`}
               badgeType="success"
-              colorBg="var(--accent-primary-light)"
             />
 
             <KPICard
-              title="ACTIVE USERS IN PERIOD"
+              title="Active Users"
               value={metrics.users?.active_in_period}
               icon="🔥"
               badgeText={`${metrics.users?.deleted_in_period || 0} Deleted`}
               badgeType="warning"
-              colorBg="var(--accent-warning-light)"
             />
 
             <KPICard
-              title="TOTAL HABITS CREATED"
+              title="Habits Created"
               value={metrics.habits?.total}
               icon="🎯"
               badgeText={`+${metrics.habits?.created_in_period || 0} in Period`}
               badgeType="info"
-              colorBg="var(--accent-info-light)"
             />
 
             <KPICard
-              title="TOTAL CHECK-INS"
+              title="Habit Completions"
               value={metrics.completions?.total}
               icon="✅"
               badgeText={`+${metrics.completions?.in_period || 0} in Period`}
               badgeType="success"
-              colorBg="var(--accent-success-light)"
+            />
+          </div>
+
+          {/* Section 2: Reminders & Session Analytics */}
+          <div style={{ marginBottom: '0.75rem', marginTop: '1rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Reminders & Session Duration
+          </div>
+          <div className="stats-grid">
+            <KPICard
+              title="Reminders Configured"
+              value={metrics.reminders?.total}
+              icon="🔔"
+              badgeText="Active"
+              badgeType="info"
             />
 
             <KPICard
-              title="REMINDERS ACTIVE"
-              value={metrics.reminders?.total}
-              icon="🔔"
-              badgeText="Configured"
-              badgeType="info"
-              colorBg="var(--accent-primary-light)"
+              title="Total Sessions"
+              value={metrics.sessions?.total_in_period ?? 0}
+              icon="📱"
+              badgeText="In Period"
+              badgeType="primary"
+            />
+
+            <KPICard
+              title="Total Usage Duration"
+              value={formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
+              icon="⏱️"
+              badgeText="Estimated"
+              badgeType="success"
+            />
+
+            <KPICard
+              title="Avg Session Duration"
+              value={formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
+              icon="⚡"
+              badgeText="Per Active User"
+              badgeType="warning"
             />
           </div>
 
-          {/* Session Usage Summary Card */}
-          <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-main)' }}>
-              ⏱️ Session & Usage Duration Analytics
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL SESSIONS IN PERIOD</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-primary)', marginTop: '0.2rem' }}>
-                  {metrics.sessions?.total_in_period ?? 0}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED TOTAL USAGE</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-success)', marginTop: '0.2rem' }}>
-                  {formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED AVG SESSION</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-warning)', marginTop: '0.2rem' }}>
-                  {formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
-                </div>
+          {/* Usage Context Note */}
+          {metrics.sessions?.usage_note && (
+            <div className="glass-card fade-in" style={{ marginTop: '0.5rem', padding: '1rem 1.25rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                📌 <strong>Platform Usage Note:</strong> {metrics.sessions.usage_note}
               </div>
             </div>
-
-            {metrics.sessions?.usage_note && (
-              <div style={{ marginTop: '1.25rem', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color-light)', paddingTop: '0.75rem' }}>
-                📌 <strong>Usage Note:</strong> {metrics.sessions.usage_note}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       ) : null}
     </div>

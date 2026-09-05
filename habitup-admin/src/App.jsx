@@ -12,7 +12,8 @@ import './App.css';
 function MainLayout() {
   const { isAuthenticated, isInitializing } = useAuth();
   const [currentTab, setCurrentTab] = useState('dashboard');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   if (isInitializing) {
     return (
@@ -43,9 +44,9 @@ function MainLayout() {
 
   const getTitle = () => {
     switch (currentTab) {
-      case 'dashboard': return 'Overview & Key Metrics';
-      case 'users': return 'User Accounts Management';
-      case 'activity': return 'Audit & Activity Log';
+      case 'dashboard': return 'Overview & Metrics';
+      case 'users': return 'User Directory';
+      case 'activity': return 'Audit Activity Feed';
       case 'analytics': return 'Usage Analytics & Trends';
       default: return 'HabitUp Dashboard';
     }
@@ -56,14 +57,21 @@ function MainLayout() {
       <Sidebar
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
-        isOpen={isMobileMenuOpen}
-        setIsOpen={setIsMobileMenuOpen}
+        isCollapsed={isCollapsed}
+        isMobileOpen={isMobileOpen}
+        setIsMobileOpen={setIsMobileOpen}
       />
 
       <main className="main-content">
         <Header
           title={getTitle()}
-          onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          onToggleCollapse={() => {
+            if (window.innerWidth <= 768) {
+              setIsMobileOpen(!isMobileOpen);
+            } else {
+              setIsCollapsed(!isCollapsed);
+            }
+          }}
         />
         {renderContent()}
       </main>

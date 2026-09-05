@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { DailyUsageChart, ActivityDistribution } from '../components/Charts';
+import { KPICard } from '../components/KPICard';
 
 export function AnalyticsPage() {
   const [period, setPeriod] = useState('7d');
@@ -45,9 +46,9 @@ export function AnalyticsPage() {
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">Usage & Activity Analytics</h2>
+          <h2 className="toolbar-title">Usage & Engagement Analytics</h2>
           <p className="toolbar-subtitle">
-            In-depth trend analysis, daily user engagement, and event distribution
+            Longitudinal session trends, user distribution, and engagement leaderboards
           </p>
         </div>
 
@@ -70,11 +71,43 @@ export function AnalyticsPage() {
 
       {loading ? (
         <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Computing analytics reports...
+          Computing analytics workspace...
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
-          {/* Charts Row */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Usage Analytics Top Summary Cards */}
+          <div className="stats-grid">
+            <KPICard
+              title="Total Sessions"
+              value={usageData?.summary?.total_sessions ?? 0}
+              icon="📱"
+              badgeText="Recorded"
+              badgeType="primary"
+            />
+            <KPICard
+              title="Active Users"
+              value={usageData?.summary?.active_users ?? 0}
+              icon="👥"
+              badgeText="In Period"
+              badgeType="info"
+            />
+            <KPICard
+              title="Total Usage"
+              value={formatSeconds(usageData?.summary?.estimated_total_usage_seconds)}
+              icon="⏱️"
+              badgeText="Estimated"
+              badgeType="success"
+            />
+            <KPICard
+              title="Average Session"
+              value={formatSeconds(usageData?.summary?.estimated_avg_session_seconds)}
+              icon="⚡"
+              badgeText="Per Session"
+              badgeType="warning"
+            />
+          </div>
+
+          {/* Charts Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
@@ -82,7 +115,7 @@ export function AnalyticsPage() {
                 📊 Daily Session Usage Trend
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Sessions recorded per day over the selected timeframe
+                Daily activity sessions recorded across the platform
               </p>
               <DailyUsageChart data={usageData?.daily || []} />
             </div>
@@ -90,10 +123,10 @@ export function AnalyticsPage() {
             {/* Event Distribution */}
             <div className="glass-card fade-in">
               <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
-                🎯 Activity Event Breakdown
+                🎯 Activity Distribution Breakdown
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Distribution of system actions by event type ({activityData?.summary?.total_events || 0} total events)
+                Event distribution across {activityData?.summary?.total_events || 0} total actions
               </p>
               <ActivityDistribution byType={activityData?.summary?.by_type || {}} />
             </div>
@@ -102,7 +135,7 @@ export function AnalyticsPage() {
           {/* Most Active Users Leaderboard */}
           <div className="glass-card fade-in">
             <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-main)' }}>
-              🏆 Most Active Users (Top Leaderboard)
+              🏆 Most Active Users Leaderboard
             </h3>
             <div className="table-container">
               <table className="data-table">
@@ -111,7 +144,7 @@ export function AnalyticsPage() {
                     <th>Rank</th>
                     <th>User Email</th>
                     <th>User ID</th>
-                    <th>Session Count</th>
+                    <th>Sessions</th>
                     <th>Est. Total Usage</th>
                   </tr>
                 </thead>

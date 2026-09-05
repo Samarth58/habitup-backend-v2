@@ -65,7 +65,7 @@ export function ActivityPage() {
         <div className="toolbar-heading">
           <h2 className="toolbar-title">Activity Audit Feed</h2>
           <p className="toolbar-subtitle">
-            System-wide audit trail of user logins, registrations, and habit events
+            System-wide audit trail of user logins, registrations, and habit check-ins
           </p>
         </div>
 
@@ -112,13 +112,13 @@ export function ActivityPage() {
             {loading ? (
               <tr>
                 <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  Loading activity feed...
+                  Loading audit logs...
                 </td>
               </tr>
             ) : events.length === 0 ? (
               <tr>
                 <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  No audit events found.
+                  No audit events found for selected filters.
                 </td>
               </tr>
             ) : (
@@ -132,11 +132,15 @@ export function ActivityPage() {
                       {ev.activity_type}
                     </span>
                   </td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                  <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
                     {ev.user_id || 'System'}
                   </td>
-                  <td style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
-                    {ev.metadata ? JSON.stringify(ev.metadata) : '—'}
+                  <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    {ev.metadata ? (
+                      <span className="neu-inset-tile" style={{ display: 'inline-block', padding: '0.2rem 0.5rem', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                        {JSON.stringify(ev.metadata)}
+                      </span>
+                    ) : '—'}
                   </td>
                 </tr>
               ))

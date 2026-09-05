@@ -1,17 +1,18 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export function Header({ title, onMenuToggle }) {
+export function Header({ title, onToggleCollapse, onToggleMobile }) {
   const { user, logout, lastHeartbeat } = useAuth();
 
   return (
     <header className="header">
       <div className="header-left">
-        {onMenuToggle && (
+        {onToggleCollapse && (
           <button
-            className="mobile-menu-btn"
-            onClick={onMenuToggle}
-            aria-label="Toggle navigation menu"
+            className="collapse-btn"
+            onClick={onToggleCollapse}
+            aria-label="Toggle sidebar collapse"
+            title="Toggle Sidebar"
           >
             ☰
           </button>

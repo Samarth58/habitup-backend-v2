@@ -1,14 +1,11 @@
 import React from 'react';
 
-export function KPICard({ title, value, icon, badgeText, badgeType = 'info', note, colorBg }) {
+export function KPICard({ title, value, icon, badgeText, badgeType = 'info', note }) {
   return (
-    <div className="glass-card kpi-card fade-in">
+    <div className="kpi-card fade-in">
       <div className="kpi-header">
         <span className="kpi-title">{title}</span>
-        <div
-          className="kpi-icon"
-          style={{ background: colorBg || 'var(--accent-primary-light)' }}
-        >
+        <div className="kpi-icon">
           {icon}
         </div>
       </div>

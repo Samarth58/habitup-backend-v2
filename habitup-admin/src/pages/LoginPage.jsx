@@ -21,7 +21,7 @@ export function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your admin credentials.');
+      setError(err.message || 'Login failed. Please check your administrator credentials.');
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,7 @@ export function LoginPage() {
           <div className="login-logo">H</div>
           <h1 className="login-title">HabitUp Admin</h1>
           <p className="login-subtitle">
-            Sign in with administrator credentials
+            Sign in with administrator privileges
           </p>
         </div>
 
@@ -42,7 +42,7 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Admin Email</label>
+            <label className="form-label">Administrator Email</label>
             <input
               type="email"
               className="form-input"
