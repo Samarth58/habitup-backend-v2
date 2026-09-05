@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 const { Pool } = require('pg');
 const { requireAuth } = require('./middleware/authMiddleware');
 const { getUserStatsHandler } = require('./controllers/habitController');
@@ -24,6 +26,7 @@ app.get('/', (req, res) => {
         name: 'HabitUp API',
         version: '1.0.0',
         docs: '/api-docs',
+        admin: '/admin-dashboard',
         health: '/health',
     });
 });
@@ -41,6 +44,17 @@ app.get('/health', async (req, res) => {
 // ─── API Docs ─────────────────────────────────────────────────────────────────
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// ─── Admin Frontend (Static files & SPA Fallback) ────────────────────────────
+const adminDistPath = path.join(__dirname, 'habitup-admin', 'dist');
+if (fs.existsSync(adminDistPath)) {
+    app.use('/admin-dashboard', express.static(adminDistPath));
+    app.get('/dashboard', (req, res) => res.redirect('/admin-dashboard'));
+    app.get('/admin-ui', (req, res) => res.redirect('/admin-dashboard'));
+    app.use('/admin-dashboard', (req, res) => {
+        res.sendFile(path.join(adminDistPath, 'index.html'));
+    });
+}
+
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/auth', require('./routes/auth'));
 app.use('/habits', require('./routes/habits'));
@@ -49,4 +63,4 @@ app.use('/admin', require('./routes/admin'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
