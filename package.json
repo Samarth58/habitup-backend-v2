@@ -9,7 +9,7 @@
     "build:admin": "npm --prefix habitup-admin install && npm --prefix habitup-admin run build",
     "dev": "nodemon server.js",
     "migrate": "dotenv -e .env -- node-pg-migrate",
-    "test": "cross-env AUTH_RATE_LIMIT_MAX=100 SEARCH_RATE_LIMIT_MAX=1000 node --test tests/auth.test.js tests/habits.test.js tests/completions-streaks.test.js tests/reminders.test.js tests/security.test.js tests/stats.test.js tests/admin.test.js tests/users.test.js",
+    "test": "cross-env AUTH_RATE_LIMIT_MAX=100 SEARCH_RATE_LIMIT_MAX=1000 node --test tests/auth.test.js tests/habits.test.js tests/completions-streaks.test.js tests/reminders.test.js tests/security.test.js tests/stats.test.js tests/admin.test.js tests/users.test.js tests/friends.test.js",
     "test:admin": "cross-env AUTH_RATE_LIMIT_MAX=100 node --test tests/admin.test.js",
     "test:rate-limit": "node --test tests/rate-limit.test.js"
   },

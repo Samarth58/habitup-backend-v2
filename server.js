@@ -60,8 +60,9 @@ app.use('/auth', require('./routes/auth'));
 app.use('/users', require('./routes/users'));
 app.use('/habits', require('./routes/habits'));
 app.use('/reminders', require('./routes/reminders'));
+app.use('/friends', require('./routes/friends'));
 app.use('/admin', require('./routes/admin'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
