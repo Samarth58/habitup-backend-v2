@@ -128,16 +128,17 @@ const pool = new Pool({
 
 /**
  * Create a new user row.
- * @param {{ name: string, email: string, password: string, timezone: string }} param0
+ * @param {{ name: string, email: string, username: string, password: string, timezone: string, role?: string }} param0
  * @returns {Promise<object>} The created user row (without password_hash).
  */
-async function createUser({ name, email, password, timezone, role = 'user' }) {
+async function createUser({ name, email, username, password, timezone, role = 'user' }) {
   const password_hash = await argon2.hash(password);
+  const lowerUsername = username.toLowerCase().trim();
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, password_hash, timezone, role)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, name, email, role, timezone, created_at`,
-    [name, email, password_hash, timezone, role]
+    `INSERT INTO users (name, email, username, password_hash, timezone, role)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, name, email, username, role, timezone, created_at`,
+    [name, email, lowerUsername, password_hash, timezone, role]
   );
   const user = rows[0];
 
@@ -160,10 +161,27 @@ async function createUser({ name, email, password, timezone, role = 'user' }) {
  */
 async function findUserByEmail(email) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, password_hash, timezone, created_at
+    `SELECT id, name, email, username, role, password_hash, timezone, created_at
      FROM users
      WHERE email = $1 AND deleted_at IS NULL`,
     [email]
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Find a user by either email or case-insensitive username.
+ * @param {string} identifier
+ * @returns {Promise<object|null>}
+ */
+async function findUserByEmailOrUsername(identifier) {
+  if (!identifier) return null;
+  const cleanIdentifier = identifier.trim();
+  const { rows } = await pool.query(
+    `SELECT id, name, email, username, role, password_hash, timezone, created_at
+     FROM users
+     WHERE (email = $1 OR LOWER(username) = LOWER($1)) AND deleted_at IS NULL`,
+    [cleanIdentifier]
   );
   return rows[0] ?? null;
 }
@@ -248,7 +266,7 @@ async function revokeAllSessionsForUser(userId) {
  */
 async function findUserById(userId) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, role, timezone, created_at
+    `SELECT id, name, email, username, role, timezone, created_at
      FROM users
      WHERE id = $1 AND deleted_at IS NULL`,
     [userId]
@@ -346,7 +364,7 @@ async function resetPassword(rawToken, newPassword) {
 
 /**
  * Deletes a user account after re-verifying password.
- * Soft-deletes the user, scrambles/anonymizes email to free the unique constraint,
+ * Soft-deletes the user, scrambles/anonymizes email and username to free the unique constraint,
  * and revokes all active sessions.
  *
  * @param {string} userId
@@ -355,7 +373,7 @@ async function resetPassword(rawToken, newPassword) {
  */
 async function deleteUserAccount(userId, password) {
   const { rows } = await pool.query(
-    `SELECT id, email, password_hash
+    `SELECT id, email, username, password_hash
      FROM users
      WHERE id = $1 AND deleted_at IS NULL`,
     [userId]
@@ -379,14 +397,16 @@ async function deleteUserAccount(userId, password) {
   }
 
   const anonymizedEmail = `${user.email}_deleted_${Date.now()}`;
+  const anonymizedUsername = `${user.username || 'user'}_deleted_${Date.now()}`.substring(0, 30);
 
   await pool.query(
     `UPDATE users
      SET deleted_at = NOW(),
          email = $1,
+         username = $2,
          updated_at = NOW()
-     WHERE id = $2`,
-    [anonymizedEmail, userId]
+     WHERE id = $3`,
+    [anonymizedEmail, anonymizedUsername, userId]
   );
 
   await revokeAllSessionsForUser(userId);
@@ -397,6 +417,7 @@ async function deleteUserAccount(userId, password) {
 module.exports = {
   createUser,
   findUserByEmail,
+  findUserByEmailOrUsername,
   findUserById,
   createSession,
   findActiveSessionByJti,
@@ -406,4 +427,4 @@ module.exports = {
   resetPassword,
   deleteUserAccount,
   updateSessionLastUsedAt,
-};
+};

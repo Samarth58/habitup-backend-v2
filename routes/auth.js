@@ -28,10 +28,11 @@ const router = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, email, password, timezone]
+ *             required: [email, username, password]
  *             properties:
  *               name:     { type: string, example: Samarth }
  *               email:    { type: string, format: email, example: samarth@example.com }
+ *               username: { type: string, example: samarth_58 }
  *               password: { type: string, example: mySecretPass123 }
  *               timezone: { type: string, example: Asia/Kolkata }
  *     responses:
@@ -45,12 +46,12 @@ const router = Router();
  *                 accessToken: { type: string }
  *                 user:        { $ref: '#/components/schemas/User' }
  *       400:
- *         description: Missing required fields
+ *         description: Missing required fields or invalid username format
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
  *       409:
- *         description: Email already in use
+ *         description: Email or username already in use
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }
@@ -62,16 +63,17 @@ router.post('/register', authLimiter, register);
  * /auth/login:
  *   post:
  *     tags: [Auth]
- *     summary: Log in and obtain access + refresh tokens
+ *     summary: Log in with email or username and obtain access + refresh tokens
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password]
+ *             required: [password]
  *             properties:
  *               email:    { type: string, format: email, example: samarth@example.com }
+ *               username: { type: string, example: samarth_58 }
  *               password: { type: string, example: mySecretPass123 }
  *     responses:
  *       200:
@@ -85,7 +87,7 @@ router.post('/register', authLimiter, register);
  *                 refreshToken: { type: string }
  *                 user:         { $ref: '#/components/schemas/User' }
  *       400:
- *         description: Missing email or password
+ *         description: Missing email/username or password
  *         content:
  *           application/json:
  *             schema: { $ref: '#/components/schemas/Error' }

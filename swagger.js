@@ -30,6 +30,7 @@ const options = {
             id:         { type: 'string', format: 'uuid' },
             name:       { type: 'string', example: 'Samarth' },
             email:      { type: 'string', format: 'email' },
+            username:   { type: 'string', example: 'samarth_58' },
             timezone:   { type: 'string', example: 'Asia/Kolkata' },
             created_at: { type: 'string', format: 'date-time' },
             role:       { type: 'string', enum: ['user', 'admin'], example: 'user' },
@@ -227,6 +228,7 @@ const options = {
     },
     tags: [
       { name: 'Auth',      description: 'Authentication & account management' },
+      { name: 'Users',     description: 'User profile, discovery, and search' },
       { name: 'Habits',    description: 'Habit CRUD, state management, and completions' },
       { name: 'Reminders', description: 'Per-habit reminder management' },
       { name: 'Stats',     description: 'Habit and user-level statistics' },

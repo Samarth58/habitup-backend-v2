@@ -4,6 +4,7 @@ const argon2 = require('argon2');
 const {
   createUser,
   findUserByEmail,
+  findUserByEmailOrUsername,
   findUserById,
   createSession,
   findActiveSessionByJti,
@@ -14,6 +15,10 @@ const {
   deleteUserAccount,
   updateSessionLastUsedAt,
 } = require('../services/authService');
+const {
+  validateUsername,
+  checkUsernameAvailable,
+} = require('../services/usernameService');
 
 
 
@@ -44,31 +49,48 @@ function signRefreshToken(userId) {
 
 /**
  * POST /auth/register
- * Body: { name, email, password, timezone }
+ * Body: { name, email, username, password, timezone }
  *
- * Returns an access token only. The user must log in to get a refresh token.
- * This keeps registration distinct from session creation (easier to add
- * email-verification later without sessions accumulating pre-verification).
+ * Returns access token (and refresh token) with user.
  */
 async function register(req, res) {
-  const { name, email, password, timezone } = req.body;
+  const { name, email, username, password, timezone } = req.body;
 
-  if (!name || !email || !password || !timezone) {
-    return res.status(400).json({ error: 'name, email, password, and timezone are required.' });
+  if (!email || !password || !username) {
+    return res.status(400).json({ error: 'email, username, and password are required.' });
   }
 
   try {
+    // 1. Validate username format & length
+    validateUsername(username);
+
+    // 2. Check username availability
+    const usernameAvailable = await checkUsernameAvailable(username);
+    if (!usernameAvailable) {
+      return res.status(409).json({ error: 'Username already taken' });
+    }
+
+    // 3. Check email availability
     const existing = await findUserByEmail(email);
     if (existing) {
       return res.status(409).json({ error: 'Email already in use.' });
     }
 
-    const user        = await createUser({ name, email, password, timezone });
+    const displayName = name || username;
+    const userTimezone = timezone || 'UTC';
+    const user        = await createUser({ name: displayName, email, username, password, timezone: userTimezone });
     require('../services/activityService').logActivity(user.id, 'REGISTER', {}, req);
     const accessToken = signAccessToken(user.id, user.email);
 
-    return res.status(201).json({ accessToken, user });
+    return res.status(201).json({
+      accessToken,
+      access_token: accessToken,
+      user,
+    });
   } catch (err) {
+    if (err.status === 400) {
+      return res.status(400).json({ error: err.message });
+    }
     console.error('[register]', err);
     return res.status(500).json({ error: 'Registration failed.' });
   }
@@ -76,20 +98,21 @@ async function register(req, res) {
 
 /**
  * POST /auth/login
- * Body: { email, password }
+ * Body: { email, password } OR { username, password }
  *
  * Returns { accessToken, refreshToken, user }.
  * The refresh token's jti is hashed with argon2 before being stored in sessions.
  */
 async function login(req, res) {
-  const { email, password } = req.body;
+  const identifier = req.body.email || req.body.username || req.body.identifier;
+  const { password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'email and password are required.' });
+  if (!identifier || !password) {
+    return res.status(400).json({ error: 'email or username and password are required.' });
   }
 
   try {
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmailOrUsername(identifier);
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
@@ -99,7 +122,7 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const accessToken              = signAccessToken(user.id, user.email);
+    const accessToken                  = signAccessToken(user.id, user.email);
     const { token: refreshToken, jti } = signRefreshToken(user.id);
 
     // Hash the jti (never store plaintext) and persist the session
@@ -109,7 +132,13 @@ async function login(req, res) {
     require('../services/activityService').logActivity(user.id, 'LOGIN', {}, req).catch((err) => console.error('[login activity]', err));
 
     const { password_hash, ...safeUser } = user;
-    return res.json({ accessToken, refreshToken, user: safeUser });
+    return res.json({
+      accessToken,
+      access_token: accessToken,
+      refreshToken,
+      refresh_token: refreshToken,
+      user: safeUser,
+    });
   } catch (err) {
     console.error('[login]', err);
     return res.status(500).json({ error: 'Login failed.' });

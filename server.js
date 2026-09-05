@@ -57,6 +57,7 @@ if (fs.existsSync(adminDistPath)) {
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/auth', require('./routes/auth'));
+app.use('/users', require('./routes/users'));
 app.use('/habits', require('./routes/habits'));
 app.use('/reminders', require('./routes/reminders'));
 app.use('/admin', require('./routes/admin'));

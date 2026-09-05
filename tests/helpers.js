@@ -13,11 +13,12 @@ async function registerTestUser(overrides = {}) {
   const password = overrides.password || 'Password123!';
   const name = overrides.name || 'Test User';
   const timezone = overrides.timezone || 'UTC';
+  const username = overrides.username || `user_${Math.random().toString(36).substring(2, 10)}_${Date.now().toString().slice(-4)}`;
 
   const res = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password, timezone }),
+    body: JSON.stringify({ name, email, username, password, timezone }),
   });
 
   const data = await res.json();
@@ -29,6 +30,7 @@ async function registerTestUser(overrides = {}) {
     email,
     password,
     name,
+    username,
     timezone,
     accessToken: data.accessToken,
     user: data.user,

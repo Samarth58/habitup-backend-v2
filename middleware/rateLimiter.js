@@ -36,8 +36,20 @@ const heartbeatLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const SEARCH_RATE_LIMIT_MAX = Number(process.env.SEARCH_RATE_LIMIT_MAX) || 30;
+
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: SEARCH_RATE_LIMIT_MAX,
+  message: { error: 'Too many search requests. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authLimiter,
   passwordResetLimiter,
   heartbeatLimiter,
+  searchLimiter,
 };
+
