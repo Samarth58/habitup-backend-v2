@@ -67,9 +67,9 @@ export function UsersPage() {
     <div className="content-container">
       {/* Toolbar */}
       <div className="toolbar">
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>User Management</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <div className="toolbar-heading">
+          <h2 className="toolbar-title">User Management</h2>
+          <p className="toolbar-subtitle">
             Filter, search, and inspect registered accounts and usage statistics
           </p>
         </div>
@@ -82,7 +82,7 @@ export function UsersPage() {
             value={emailSearch}
             onChange={(e) => setEmailSearch(e.target.value)}
           />
-          <button type="submit" className="pagination-btn">Search</button>
+          <button type="submit" className="pagination-btn" style={{ fontWeight: 600 }}>Search</button>
 
           <select
             className="select-input"
@@ -132,27 +132,27 @@ export function UsersPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>User / Email</th>
+              <th>User</th>
               <th>Role</th>
               <th>Status</th>
               <th>Habits</th>
               <th>Completions</th>
               <th>Usage</th>
-              <th>Joined Date</th>
+              <th>Joined</th>
               <th>Last Activity</th>
-              <th>Actions</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                  Loading users table...
+                <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
+                  Loading users directory...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-dim)' }}>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
                   No users found matching the selected filters.
                 </td>
               </tr>
@@ -161,17 +161,17 @@ export function UsersPage() {
                 <tr key={u.id} onClick={() => setSelectedUserId(u.id)}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div className="avatar" style={{ width: '32px', height: '32px' }}>
+                      <div className="avatar">
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600 }}>{u.name}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{u.name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span className={`badge-tag badge-${u.role === 'admin' ? 'info' : 'success'}`}>
+                    <span className={`badge-tag badge-${u.role === 'admin' ? 'info' : 'primary'}`}>
                       {u.role}
                     </span>
                   </td>
@@ -180,25 +180,24 @@ export function UsersPage() {
                       {u.status || (u.deleted_at ? 'deleted' : 'active')}
                     </span>
                   </td>
-                  <td>{u.total_habits ?? 0}</td>
-                  <td>{u.total_completions ?? 0}</td>
-                  <td>{formatDuration(u.estimated_usage_seconds)}</td>
-                  <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td>
+                  <td style={{ fontWeight: 600 }}>{u.total_habits ?? 0}</td>
+                  <td style={{ fontWeight: 600 }}>{u.total_completions ?? 0}</td>
+                  <td style={{ color: 'var(--text-secondary)' }}>{formatDuration(u.estimated_usage_seconds)}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                     {u.last_activity_at
                       ? new Date(u.last_activity_at).toLocaleDateString()
                       : '—'}
                   </td>
-                  <td>
+                  <td style={{ textAlign: 'right' }}>
                     <button
-                      className="pagination-btn"
-                      style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}
+                      className="action-btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedUserId(u.id);
                       }}
                     >
-                      View Details
+                      View Profile
                     </button>
                   </td>
                 </tr>
@@ -211,7 +210,7 @@ export function UsersPage() {
       {/* Pagination Controls */}
       <div className="pagination">
         <span>
-          Showing Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total users)
+          Showing Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total accounts)
         </span>
 
         <div className="filter-group">
@@ -233,7 +232,7 @@ export function UsersPage() {
         </div>
       </div>
 
-      {/* User Detail Slide-over Modal */}
+      {/* User Detail Modal */}
       {selectedUserId && (
         <UserDetailModal
           userId={selectedUserId}

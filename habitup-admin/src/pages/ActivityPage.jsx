@@ -51,7 +51,8 @@ export function ActivityPage() {
       case 'LOGIN': return 'info';
       case 'REGISTER': return 'success';
       case 'HABIT_COMPLETED': return 'success';
-      case 'HABIT_CREATED': return 'warning';
+      case 'HABIT_CREATED': return 'primary';
+      case 'HABIT_UPDATED': return 'warning';
       case 'HABIT_DELETED': return 'danger';
       default: return 'info';
     }
@@ -61,9 +62,9 @@ export function ActivityPage() {
     <div className="content-container">
       {/* Toolbar */}
       <div className="toolbar">
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Activity Audit Feed</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <div className="toolbar-heading">
+          <h2 className="toolbar-title">Activity Audit Feed</h2>
+          <p className="toolbar-subtitle">
             System-wide audit trail of user logins, registrations, and habit events
           </p>
         </div>
@@ -76,7 +77,7 @@ export function ActivityPage() {
             value={userIdFilter}
             onChange={(e) => setUserIdFilter(e.target.value)}
           />
-          <button type="submit" className="pagination-btn">Filter User</button>
+          <button type="submit" className="pagination-btn" style={{ fontWeight: 600 }}>Filter User</button>
 
           <select
             className="select-input"
@@ -110,20 +111,20 @@ export function ActivityPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
                   Loading activity feed...
                 </td>
               </tr>
             ) : events.length === 0 ? (
               <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-dim)' }}>
+                <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
                   No audit events found.
                 </td>
               </tr>
             ) : (
               events.map((ev) => (
                 <tr key={ev.id}>
-                  <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     {new Date(ev.created_at).toLocaleString()}
                   </td>
                   <td>
@@ -131,10 +132,10 @@ export function ActivityPage() {
                       {ev.activity_type}
                     </span>
                   </td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
+                  <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
                     {ev.user_id || 'System'}
                   </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                  <td style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
                     {ev.metadata ? JSON.stringify(ev.metadata) : '—'}
                   </td>
                 </tr>

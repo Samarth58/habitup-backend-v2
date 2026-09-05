@@ -44,15 +44,15 @@ export function AnalyticsPage() {
     <div className="content-container">
       {/* Toolbar */}
       <div className="toolbar">
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Usage & Activity Analytics</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <div className="toolbar-heading">
+          <h2 className="toolbar-title">Usage & Activity Analytics</h2>
+          <p className="toolbar-subtitle">
             In-depth trend analysis, daily user engagement, and event distribution
           </p>
         </div>
 
         <div className="filter-group">
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Period:</label>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Period:</label>
           <select
             className="select-input"
             value={period}
@@ -69,19 +69,19 @@ export function AnalyticsPage() {
       {error && <div className="error-alert">{error}</div>}
 
       {loading ? (
-        <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
           Computing analytics reports...
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           {/* Charts Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
                 📊 Daily Session Usage Trend
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                 Sessions recorded per day over the selected timeframe
               </p>
               <DailyUsageChart data={usageData?.daily || []} />
@@ -89,10 +89,10 @@ export function AnalyticsPage() {
 
             {/* Event Distribution */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
                 🎯 Activity Event Breakdown
               </h3>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                 Distribution of system actions by event type ({activityData?.summary?.total_events || 0} total events)
               </p>
               <ActivityDistribution byType={activityData?.summary?.by_type || {}} />
@@ -101,7 +101,7 @@ export function AnalyticsPage() {
 
           {/* Most Active Users Leaderboard */}
           <div className="glass-card fade-in">
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-main)' }}>
               🏆 Most Active Users (Top Leaderboard)
             </h3>
             <div className="table-container">
@@ -121,24 +121,24 @@ export function AnalyticsPage() {
                       <tr key={user.user_id}>
                         <td>
                           <span
-                            className={`badge-tag badge-${idx === 0 ? 'warning' : idx === 1 ? 'info' : 'success'}`}
+                            className={`badge-tag badge-${idx === 0 ? 'warning' : idx === 1 ? 'info' : 'primary'}`}
                           >
                             #{idx + 1}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 600 }}>{user.email}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
+                        <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{user.email}</td>
+                        <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)' }}>
                           {user.user_id}
                         </td>
                         <td style={{ fontWeight: 700, color: 'var(--accent-success)' }}>
                           {user.session_count}
                         </td>
-                        <td>{formatSeconds(user.estimated_usage_seconds)}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>{formatSeconds(user.estimated_usage_seconds)}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2.5rem' }}>
                         No session activity recorded for this period.
                       </td>
                     </tr>

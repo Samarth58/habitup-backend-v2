@@ -1,18 +1,29 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export function Header({ title }) {
+export function Header({ title, onMenuToggle }) {
   const { user, logout, lastHeartbeat } = useAuth();
 
   return (
     <header className="header">
-      <h1 className="header-title">{title}</h1>
+      <div className="header-left">
+        {onMenuToggle && (
+          <button
+            className="mobile-menu-btn"
+            onClick={onMenuToggle}
+            aria-label="Toggle navigation menu"
+          >
+            ☰
+          </button>
+        )}
+        <h1 className="header-title">{title}</h1>
+      </div>
 
       <div className="header-actions">
         {lastHeartbeat && (
-          <div className="heartbeat-badge" title="Session Heartbeat Active">
+          <div className="heartbeat-badge" title="Live Session Heartbeat Active">
             <div className="heartbeat-dot"></div>
-            <span>Heartbeat: {lastHeartbeat}</span>
+            <span>Live • {lastHeartbeat}</span>
           </div>
         )}
 
@@ -21,14 +32,13 @@ export function Header({ title }) {
             {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className="user-info">
-            <span className="user-name">{user?.name || 'Admin User'}</span>
+            <span className="user-name">{user?.name || 'Admin'}</span>
             <span className="user-role">{user?.role || 'admin'}</span>
           </div>
         </div>
 
         <button className="logout-btn" onClick={logout} title="Sign Out">
-          <span>🚪</span>
-          <span>Logout</span>
+          <span>Sign Out</span>
         </button>
       </div>
     </header>

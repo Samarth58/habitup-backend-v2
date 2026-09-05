@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function Sidebar({ currentTab, setCurrentTab }) {
+export function Sidebar({ currentTab, setCurrentTab, isOpen, setIsOpen }) {
   const navItems = [
     { id: 'dashboard', label: 'Overview', icon: '📊' },
     { id: 'users', label: 'User Management', icon: '👥' },
@@ -8,11 +8,19 @@ export function Sidebar({ currentTab, setCurrentTab }) {
     { id: 'analytics', label: 'Usage & Analytics', icon: '📈' },
   ];
 
+  const handleNavClick = (id) => {
+    setCurrentTab(id);
+    if (setIsOpen) {
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-logo">
         <div className="logo-icon">H</div>
-        <span className="logo-text">HabitUp Admin</span>
+        <span className="logo-text">HabitUp</span>
+        <span className="logo-badge">Admin</span>
       </div>
 
       <nav>
@@ -21,7 +29,7 @@ export function Sidebar({ currentTab, setCurrentTab }) {
             <li key={item.id}>
               <button
                 className={`nav-item ${currentTab === item.id ? 'active' : ''}`}
-                onClick={() => setCurrentTab(item.id)}
+                onClick={() => handleNavClick(item.id)}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span>{item.label}</span>
@@ -30,6 +38,11 @@ export function Sidebar({ currentTab, setCurrentTab }) {
           ))}
         </ul>
       </nav>
+
+      <div className="sidebar-footer">
+        <span>HabitUp Platform</span>
+        <span>v2.0</span>
+      </div>
     </aside>
   );
 }

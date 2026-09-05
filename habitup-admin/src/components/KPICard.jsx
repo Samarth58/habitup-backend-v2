@@ -5,7 +5,10 @@ export function KPICard({ title, value, icon, badgeText, badgeType = 'info', not
     <div className="glass-card kpi-card fade-in">
       <div className="kpi-header">
         <span className="kpi-title">{title}</span>
-        <div className="kpi-icon" style={{ background: colorBg || 'rgba(99, 102, 241, 0.15)' }}>
+        <div
+          className="kpi-icon"
+          style={{ background: colorBg || 'var(--accent-primary-light)' }}
+        >
           {icon}
         </div>
       </div>

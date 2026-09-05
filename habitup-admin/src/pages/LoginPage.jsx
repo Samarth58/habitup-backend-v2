@@ -21,7 +21,7 @@ export function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      setError(err.message || 'Login failed. Please check your admin credentials.');
     } finally {
       setLoading(false);
     }
@@ -32,10 +32,8 @@ export function LoginPage() {
       <div className="login-card fade-in">
         <div className="login-header">
           <div className="login-logo">H</div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-            HabitUp Admin
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+          <h1 className="login-title">HabitUp Admin</h1>
+          <p className="login-subtitle">
             Sign in with administrator credentials
           </p>
         </div>
@@ -44,7 +42,7 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label className="form-label">Admin Email</label>
             <input
               type="email"
               className="form-input"
@@ -52,6 +50,7 @@ export function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoFocus
             />
           </div>
 

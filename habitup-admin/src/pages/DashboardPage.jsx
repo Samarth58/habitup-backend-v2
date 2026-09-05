@@ -34,15 +34,15 @@ export function DashboardPage() {
     <div className="content-container">
       {/* Top Filter Bar */}
       <div className="toolbar">
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 700 }}>System Overview</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+        <div className="toolbar-heading">
+          <h2 className="toolbar-title">System Overview</h2>
+          <p className="toolbar-subtitle">
             High-level metrics across users, habits, check-ins, and session usage
           </p>
         </div>
 
         <div className="filter-group">
-          <label style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Period:</label>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Period:</label>
           <select
             className="select-input"
             value={period}
@@ -60,7 +60,7 @@ export function DashboardPage() {
       {error && <div className="error-alert">{error}</div>}
 
       {loading ? (
-        <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
           Loading dashboard metrics...
         </div>
       ) : metrics ? (
@@ -73,7 +73,7 @@ export function DashboardPage() {
               icon="👥"
               badgeText={`+${metrics.users?.new_in_period || 0} New`}
               badgeType="success"
-              colorBg="rgba(99, 102, 241, 0.2)"
+              colorBg="var(--accent-primary-light)"
             />
 
             <KPICard
@@ -82,7 +82,7 @@ export function DashboardPage() {
               icon="🔥"
               badgeText={`${metrics.users?.deleted_in_period || 0} Deleted`}
               badgeType="warning"
-              colorBg="rgba(16, 185, 129, 0.2)"
+              colorBg="var(--accent-warning-light)"
             />
 
             <KPICard
@@ -91,7 +91,7 @@ export function DashboardPage() {
               icon="🎯"
               badgeText={`+${metrics.habits?.created_in_period || 0} in Period`}
               badgeType="info"
-              colorBg="rgba(139, 92, 246, 0.2)"
+              colorBg="var(--accent-info-light)"
             />
 
             <KPICard
@@ -100,7 +100,7 @@ export function DashboardPage() {
               icon="✅"
               badgeText={`+${metrics.completions?.in_period || 0} in Period`}
               badgeType="success"
-              colorBg="rgba(245, 158, 11, 0.2)"
+              colorBg="var(--accent-success-light)"
             />
 
             <KPICard
@@ -109,33 +109,33 @@ export function DashboardPage() {
               icon="🔔"
               badgeText="Configured"
               badgeType="info"
-              colorBg="rgba(59, 130, 246, 0.2)"
+              colorBg="var(--accent-primary-light)"
             />
           </div>
 
           {/* Session Usage Summary Card */}
           <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem', color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-main)' }}>
               ⏱️ Session & Usage Duration Analytics
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
               <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>TOTAL SESSIONS IN PERIOD</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL SESSIONS IN PERIOD</div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-primary)', marginTop: '0.2rem' }}>
                   {metrics.sessions?.total_in_period ?? 0}
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ESTIMATED TOTAL USAGE</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED TOTAL USAGE</div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-success)', marginTop: '0.2rem' }}>
                   {formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
                 </div>
               </div>
 
               <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ESTIMATED AVG SESSION</div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED AVG SESSION</div>
                 <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent-warning)', marginTop: '0.2rem' }}>
                   {formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
                 </div>
@@ -143,7 +143,7 @@ export function DashboardPage() {
             </div>
 
             {metrics.sessions?.usage_note && (
-              <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-dim)', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}>
+              <div style={{ marginTop: '1.25rem', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border-color-light)', paddingTop: '0.75rem' }}>
                 📌 <strong>Usage Note:</strong> {metrics.sessions.usage_note}
               </div>
             )}

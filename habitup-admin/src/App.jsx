@@ -12,10 +12,11 @@ import './App.css';
 function MainLayout() {
   const { isAuthenticated, isInitializing } = useAuth();
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   if (isInitializing) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
         Initializing Admin Dashboard...
       </div>
     );
@@ -52,10 +53,18 @@ function MainLayout() {
 
   return (
     <div className="admin-app">
-      <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+      <Sidebar
+        currentTab={currentTab}
+        setCurrentTab={setCurrentTab}
+        isOpen={isMobileMenuOpen}
+        setIsOpen={setIsMobileMenuOpen}
+      />
 
       <main className="main-content">
-        <Header title={getTitle()} />
+        <Header
+          title={getTitle()}
+          onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        />
         {renderContent()}
       </main>
     </div>
