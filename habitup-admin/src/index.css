@@ -147,3 +147,26 @@ select:focus-visible {
 input, select, textarea {
   font-family: inherit;
 }
+
+/* ==========================================================================
+   Accessibility: Motion Sensitivity Safeguards (WCAG 2.1 AAA / A Compliance)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .heartbeat-dot {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

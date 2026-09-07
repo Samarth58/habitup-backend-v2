@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-07T14:47:30.000Z",
+  "title": "Design System: HabitUp Admin",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Indigo Accent",
+        "canonical": "#4f46e5",
+        "tonalRamp": [
+          "#312e81",
+          "#3730a3",
+          "#4338ca",
+          "#4f46e5",
+          "#6366f1",
+          "#818cf8",
+          "#a5b4fc",
+          "#e0e7ff"
+        ]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "Sky Accent",
+        "canonical": "#0284c7",
+        "tonalRamp": [
+          "#0c4a6e",
+          "#075985",
+          "#0369a1",
+          "#0284c7",
+          "#38bdf8",
+          "#7dd3fc",
+          "#bae6fd",
+          "#e0f2fe"
+        ]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Emerald Success",
+        "canonical": "#059669",
+        "tonalRamp": [
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#34d399",
+          "#6ee7b7",
+          "#d1fae5"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Slate Canvas",
+        "canonical": "#f1f5f9",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#f8fafc"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Primary numerical KPI metric values."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Main toolbar page titles and portal headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card section headers and chart category titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "General table cells, modal copy, and form descriptions."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table column headings, status tags, and KPI uppercase labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-ambient",
+        "value": "0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.9)",
+        "purpose": "Default resting elevation for frosted glass cards and tables."
+      },
+      {
+        "name": "card-hover",
+        "value": "0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 12px 24px -2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1)",
+        "purpose": "Interactive lift state on card and container hover."
+      },
+      {
+        "name": "neu-inset",
+        "value": "inset 1.5px 1.5px 3px rgba(148, 163, 184, 0.18), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.95)",
+        "purpose": "Tactile recessed well for search inputs, select dropdowns, and data metric tiles."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-cubic",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Smooth acceleration and settling for button clicks, card hover, and modal open."
+      }
+    ],
+    "breakpoints": [
+      { "name": "tablet", "value": "1024px" },
+      { "name": "mobile", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action button with soft elevation and hover glow.",
+      "html": "<button class=\"ds-btn-primary\">Sign In to Dashboard</button>",
+      "css": ".ds-btn-primary { background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: #ffffff; padding: 13px 20px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; border: none; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35); cursor: pointer; transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45); }"
+    },
+    {
+      "name": "Action Button",
+      "kind": "button",
+      "refersTo": "button-action",
+      "description": "Compact secondary button for table rows and card action items.",
+      "html": "<button class=\"ds-btn-action\">View Profile</button>",
+      "css": ".ds-btn-action { background: #ffffff; border: 1px solid rgba(226, 232, 240, 0.85); color: #4f46e5; font-weight: 700; font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); cursor: pointer; transition: all 0.18s ease; } .ds-btn-action:hover { background: #4f46e5; color: #ffffff; border-color: #4f46e5; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }"
+    },
+    {
+      "name": "Search Input Well",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Tactile recessed input field with inner neumorphic shadow and focus ring.",
+      "html": "<input type=\"text\" class=\"ds-input-search\" placeholder=\"Search email or @username...\" />",
+      "css": ".ds-input-search { background: #f8fafc; border: 1px solid rgba(226, 232, 240, 0.85); box-shadow: inset 1.5px 1.5px 3px rgba(148, 163, 184, 0.18), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.95); color: #0f172a; padding: 9px 15px; border-radius: 12px; font-size: 0.85rem; font-weight: 500; outline: none; transition: all 0.2s ease; } .ds-input-search:focus { border-color: #4f46e5; background: #ffffff; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }"
+    },
+    {
+      "name": "Status Badge Chip",
+      "kind": "chip",
+      "refersTo": "chip-badge",
+      "description": "Compact semantic status tag with subtle tinted fill and border stroke.",
+      "html": "<span class=\"ds-badge-success\">Active</span>",
+      "css": ".ds-badge-success { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; background: rgba(5, 150, 105, 0.09); color: #059669; border: 1px solid rgba(5, 150, 105, 0.2); letter-spacing: 0.2px; }"
+    },
+    {
+      "name": "Glass Surface Card",
+      "kind": "card",
+      "refersTo": "card-glass",
+      "description": "Frosted light glass card with specular highlight border and dual ambient shadow.",
+      "html": "<div class=\"ds-card-glass\"><div style=\"font-size: 0.72rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px;\">TOTAL REGISTERED USERS</div><div style=\"font-size: 2.1rem; font-weight: 800; color: #0f172a; margin-top: 6px;\">1,428</div></div>",
+      "css": ".ds-card-glass { background: rgba(255, 255, 255, 0.84); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.85); border-radius: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.9); padding: 22px; transition: all 0.22s ease; } .ds-card-glass:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 12px 24px -2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calibrated Command Center",
+    "overview": "HabitUp Admin is an operational platform interface designed for high-density administrative clarity. It bridges soft neumorphic tactile physics with frosted light glassmorphism to present complex habit check-in volumes, longitudinal session durations, and user activity audit trails with effortless scanability.\n\nThe visual atmosphere balances a calm slate-blue canvas (#f1f5f9) with layered semi-transparent glass cards (rgba(255, 255, 255, 0.84)) that use 14px backdrop blur and crisp 1px specular highlight borders (rgba(255, 255, 255, 0.85)).",
+    "keyCharacteristics": [
+      "Calm, High-Contrast Palette: Slate neutrals paired with purposeful semantic accents.",
+      "Dual Neumorphic Physics: Elevated surface cards above the canvas, with tactile inset wells for metric data containers and search inputs.",
+      "Tabular Precision: Standardized tabular-nums across all timestamps, streak counters, check-in totals, and financial/audit data.",
+      "Operational Focus: Sticky frosted table headers, clear interactive states, and WCAG AA contrast."
+    ],
+    "rules": [
+      {
+        "name": "The Rarity of Red Rule",
+        "body": "Rose/red accents (#e11d48) are reserved exclusively for irreversible destructive actions and critical error notices.",
+        "section": "colors"
+      },
+      {
+        "name": "The High-Contrast Text Rule",
+        "body": "All text layers must achieve a minimum 4.5:1 contrast ratio against their immediate background surface.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Number Rule",
+        "body": "All timestamps, duration calculations, habit counts, and streak numbers must render with tabular-nums to ensure zero jitter and perfect vertical column alignment.",
+        "section": "typography"
+      },
+      {
+        "name": "The Recessed Data Rule",
+        "body": "Inputs, search fields, and metric calculation tiles are styled as recessed inset wells (neu-inset-tile), while interactive cards and action triggers remain elevated above the canvas.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use tabular-nums on all streak numbers, time durations, dates, and metrics.",
+      "Do wrap data calculation metrics and search inputs in tactile inset wells (neu-inset-tile).",
+      "Do preserve the sticky frosted table header (backdrop-filter: blur(14px)) so column headers remain visible during scroll.",
+      "Do use monospace formatting (JetBrains Mono) for raw UUIDs and metadata JSON context.",
+      "Do maintain WCAG AA contrast (minimum 4.5:1 ratio) on all text layers."
+    ],
+    "donts": [
+      "Don't use opaque heavy drop-shadows or dark neumorphism; keep elevation light, clean, and ambient.",
+      "Don't add decorative animated background gradients that distract from administrative data inspection.",
+      "Don't use generic default browser focus rings; use the standardized 2px offset Indigo focus ring.",
+      "Don't mix multiple font families outside Plus Jakarta Sans and JetBrains Mono.",
+      "Don't allow long metadata strings to cause horizontal layout distortion; truncate with ellipsis and monospace styling."
+    ]
+  }
+}

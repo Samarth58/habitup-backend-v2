@@ -74,7 +74,10 @@ export function ActivityDistribution({ byType = {} }) {
             <div className="progress-bar-bg">
               <div
                 className="progress-bar-fill"
-                style={{ width: `${percent}%`, background: color }}
+                style={{
+                  '--progress-scale': percent / 100,
+                  background: color,
+                }}
               ></div>
             </div>
           </div>
