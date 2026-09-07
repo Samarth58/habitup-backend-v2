@@ -105,6 +105,14 @@ describe('Admin Dashboard API Suite', () => {
       assert.equal(res3.status, 200);
       const body3 = await res3.json();
       assert.ok(body3.users.some(u => u.email.toLowerCase() === targetEmail.toLowerCase()));
+
+      const targetUsername = regularUser.user?.username || regularUser.username;
+      if (targetUsername) {
+        const res4 = await authFetch(`/admin/users?email=${encodeURIComponent(targetUsername)}`, {}, adminUser.accessToken);
+        assert.equal(res4.status, 200);
+        const body4 = await res4.json();
+        assert.ok(body4.users.some(u => u.username === targetUsername));
+      }
     });
 
     test('8. Admin can fetch single user details', async () => {
@@ -115,6 +123,9 @@ describe('Admin Dashboard API Suite', () => {
       assert.ok(body.user);
       assert.equal(body.user.id, regularUser.user.id);
       assert.equal(body.user.email, regularUser.email);
+      if (regularUser.user.username) {
+        assert.equal(body.user.username, regularUser.user.username);
+      }
     });
 
     test('9. Sensitive credentials (password_hash, tokens) are NEVER returned in user details', async () => {

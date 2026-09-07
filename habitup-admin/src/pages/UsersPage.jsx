@@ -78,7 +78,7 @@ export function UsersPage() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search by email..."
+            placeholder="Search by email or @username..."
             value={emailSearch}
             onChange={(e) => setEmailSearch(e.target.value)}
           />
@@ -110,6 +110,7 @@ export function UsersPage() {
             onChange={(e) => setSortField(e.target.value)}
           >
             <option value="created_at">Created Date</option>
+            <option value="username">Username</option>
             <option value="email">Email</option>
             <option value="last_activity">Last Activity</option>
           </select>
@@ -165,7 +166,14 @@ export function UsersPage() {
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{u.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{u.name}</span>
+                          {u.username && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                              @{u.username}
+                            </span>
+                          )}
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
                       </div>
                     </div>

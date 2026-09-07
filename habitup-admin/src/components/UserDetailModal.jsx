@@ -55,7 +55,14 @@ export function UserDetailModal({ userId, onClose }) {
                 {userData.name ? userData.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{userData.name}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{userData.name}</h2>
+                  {userData.username && (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                      @{userData.username}
+                    </span>
+                  )}
+                </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{userData.email}</div>
                 <div style={{ marginTop: '0.35rem', display: 'flex', gap: '0.45rem' }}>
                   <span className={`badge-tag badge-${userData.role === 'admin' ? 'info' : 'primary'}`}>

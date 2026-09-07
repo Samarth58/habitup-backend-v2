@@ -160,7 +160,7 @@ async function getUsersList({
 
   if (email) {
     queryParams.push(`%${email}%`);
-    conditions.push(`u.email ILIKE $${queryParams.length}`);
+    conditions.push(`(u.email ILIKE $${queryParams.length} OR u.username ILIKE $${queryParams.length})`);
   }
 
   if (role) {
@@ -179,6 +179,7 @@ async function getUsersList({
   const sortColumnMap = {
     created_at: 'u.created_at',
     email: 'u.email',
+    username: 'u.username',
     last_activity: 'last_activity_at',
   };
   const sortCol = sortColumnMap[sort] || 'u.created_at';
@@ -194,6 +195,7 @@ async function getUsersList({
       SELECT
         u.id,
         u.name,
+        u.username,
         u.email,
         u.role,
         u.created_at,
@@ -271,7 +273,7 @@ async function getUsersList({
  */
 async function getUserDetail(userId) {
   const userQuery = `
-    SELECT id, name, email, role, timezone, created_at, updated_at, deleted_at
+    SELECT id, name, username, email, role, timezone, created_at, updated_at, deleted_at
     FROM users
     WHERE id = $1
   `;
@@ -386,6 +388,7 @@ async function getUserDetail(userId) {
     user: {
       id: user.id,
       name: user.name,
+      username: user.username,
       email: user.email,
       role: user.role,
       timezone: user.timezone,
