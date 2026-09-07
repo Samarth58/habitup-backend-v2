@@ -23,7 +23,7 @@ export function Sidebar({ currentTab, setCurrentTab, isCollapsed, isMobileOpen, 
         <span className="logo-badge">Admin</span>
       </div>
 
-      <nav>
+      <nav aria-label="Admin Navigation">
         <ul className="nav-list">
           {navItems.map((item) => (
             <li key={item.id}>
@@ -31,8 +31,9 @@ export function Sidebar({ currentTab, setCurrentTab, isCollapsed, isMobileOpen, 
                 className={`nav-item ${currentTab === item.id ? 'active' : ''}`}
                 onClick={() => handleNavClick(item.id)}
                 title={item.label}
+                aria-current={currentTab === item.id ? 'page' : undefined}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon" aria-hidden="true">{item.icon}</span>
                 <span className="nav-text">{item.label}</span>
               </button>
             </li>

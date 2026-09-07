@@ -53,8 +53,11 @@ export function AnalyticsPage() {
         </div>
 
         <div className="filter-group">
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Period:</label>
+          <label htmlFor="analytics-period-select" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+            Period:
+          </label>
           <select
+            id="analytics-period-select"
             className="select-input"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
@@ -111,7 +114,7 @@ export function AnalyticsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
                 📊 Daily Session Usage Trend
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
@@ -122,11 +125,11 @@ export function AnalyticsPage() {
 
             {/* Event Distribution */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem', color: 'var(--text-main)' }}>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
                 🎯 Activity Distribution Breakdown
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Event distribution across {activityData?.summary?.total_events || 0} total actions
+                Event distribution across <span className="tabular-nums font-semibold">{activityData?.summary?.total_events || 0}</span> total actions
               </p>
               <ActivityDistribution byType={activityData?.summary?.by_type || {}} />
             </div>
@@ -134,7 +137,7 @@ export function AnalyticsPage() {
 
           {/* Most Active Users Leaderboard */}
           <div className="glass-card fade-in">
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
               🏆 Most Active Users Leaderboard
             </h3>
             <div className="table-container">
@@ -159,14 +162,16 @@ export function AnalyticsPage() {
                             #{idx + 1}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{user.email}</td>
-                        <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)' }}>
+                        <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{user.email}</td>
+                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
                           {user.user_id}
                         </td>
-                        <td style={{ fontWeight: 700, color: 'var(--accent-success)' }}>
+                        <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success)' }}>
                           {user.session_count}
                         </td>
-                        <td style={{ color: 'var(--text-secondary)' }}>{formatSeconds(user.estimated_usage_seconds)}</td>
+                        <td className="tabular-nums" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                          {formatSeconds(user.estimated_usage_seconds)}
+                        </td>
                       </tr>
                     ))
                   ) : (

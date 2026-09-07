@@ -23,12 +23,12 @@ export function DailyUsageChart({ data = [] }) {
                 style={{ height: `${Math.max(heightPercent, 6)}%` }}
                 title={`${item.date}: ${item.sessions} sessions (${item.active_users} active users)`}
               ></div>
-              <span className="chart-label">{item.date?.slice(5)}</span>
+              <span className="chart-label tabular-nums">{item.date?.slice(5)}</span>
             </div>
           );
         })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
         <span>Sessions per Day</span>
         <span>Dates (MM-DD)</span>
       </div>
@@ -38,7 +38,7 @@ export function DailyUsageChart({ data = [] }) {
 
 export function ActivityDistribution({ byType = {} }) {
   const entries = Object.entries(byType);
-  const total = entries.reduce((acc, [_, count]) => acc + count, 0);
+  const total = entries.reduce((acc, [, count]) => acc + count, 0);
 
   if (total === 0) {
     return (
@@ -53,21 +53,23 @@ export function ActivityDistribution({ byType = {} }) {
     '#059669', // Emerald
     '#d97706', // Amber
     '#7c3aed', // Violet
-    '#db2777', // Pink
-    '#2563eb', // Blue
+    '#e11d48', // Rose
+    '#0284c7', // Sky
     '#0d9488', // Teal
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
       {entries.map(([type, count], idx) => {
         const percent = Math.round((count / total) * 100);
         const color = colorPalette[idx % colorPalette.length];
         return (
           <div key={type}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.3rem' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{type}</span>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{count} ({percent}%)</span>
+              <span className="tabular-nums" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                {count} ({percent}%)
+              </span>
             </div>
             <div className="progress-bar-bg">
               <div

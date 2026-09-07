@@ -1,66 +1,70 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* ==========================================================================
-     Soft Neumorphic + Light Glass Design System Tokens
+     HabitUp Admin - Soft Neumorphic + Light Glass Design System Tokens
      ========================================================================== */
 
-  /* Level 1: Page Background (Soft Blue-Gray Tint for optimal shadow contrast) */
-  --bg-page: #eff3f8;
-  --bg-page-gradient: radial-gradient(at 10% 10%, #f4f7fc 0px, transparent 60%),
-                      radial-gradient(at 90% 10%, #ebf1f8 0px, transparent 60%),
-                      #eff3f8;
+  /* Surface & Canvas Colors (Calm Blue-Gray Palette) */
+  --bg-page: #f1f5f9;
+  --bg-page-gradient: radial-gradient(at 0% 0%, #f8fafc 0px, transparent 50%),
+                      radial-gradient(at 100% 0%, #edf2f7 0px, transparent 50%),
+                      radial-gradient(at 50% 100%, #e2e8f0 0px, transparent 60%),
+                      #f1f5f9;
 
-  /* Level 2: Glass Surfaces (Frosted semi-transparent white) */
-  --bg-card: rgba(255, 255, 255, 0.82);
-  --bg-card-hover: rgba(255, 255, 255, 0.94);
-  --bg-sidebar: rgba(248, 250, 253, 0.88);
-  --bg-header: rgba(248, 250, 253, 0.85);
-  --bg-modal: rgba(255, 255, 255, 0.95);
+  /* Level 1 & 2: Frosted Glass Surfaces */
+  --bg-glass-card: rgba(255, 255, 255, 0.84);
+  --bg-glass-card-hover: rgba(255, 255, 255, 0.96);
+  --bg-glass-sidebar: rgba(248, 250, 252, 0.9);
+  --bg-glass-header: rgba(248, 250, 252, 0.88);
+  --bg-glass-modal: rgba(255, 255, 255, 0.96);
+  --bg-glass-table: rgba(255, 255, 255, 0.92);
   --bg-input: #f8fafc;
-  --bg-surface-elevated: #ffffff;
+  --bg-input-focus: #ffffff;
 
   /* Borders & Highlights */
   --border-glass: 1px solid rgba(255, 255, 255, 0.85);
-  --border-subtle: 1px solid rgba(218, 226, 237, 0.7);
-  --border-subtle-hover: rgba(99, 102, 241, 0.35);
+  --border-subtle: 1px solid rgba(226, 232, 240, 0.8);
+  --border-subtle-hover: rgba(99, 102, 241, 0.4);
+  --border-table-row: 1px solid rgba(241, 245, 249, 0.9);
 
-  /* Dual Neumorphic Shadows (Calm & Subtle) */
-  --neu-shadow-flat: 4px 4px 12px rgba(166, 178, 196, 0.22), -4px -4px 12px rgba(255, 255, 255, 0.95);
-  --neu-shadow-hover: 6px 6px 18px rgba(166, 178, 196, 0.3), -6px -6px 18px rgba(255, 255, 255, 1);
-  --neu-shadow-sm: 2px 2px 6px rgba(166, 178, 196, 0.18), -2px -2px 6px rgba(255, 255, 255, 0.9);
-  --neu-shadow-inset: inset 2px 2px 5px rgba(166, 178, 196, 0.22), inset -2px -2px 5px rgba(255, 255, 255, 0.95);
-  --neu-shadow-btn: 3px 3px 8px rgba(166, 178, 196, 0.25), -3px -3px 8px rgba(255, 255, 255, 0.95);
-  --neu-shadow-active: inset 1px 1px 3px rgba(166, 178, 196, 0.3), inset -1px -1px 3px rgba(255, 255, 255, 0.9);
+  /* Dual Neumorphic & Ambient Shadows (Subtle, Clean, Functional) */
+  --neu-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --neu-shadow-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 12px 24px -2px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --neu-shadow-btn: 0 1px 2px rgba(15, 23, 42, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --neu-shadow-btn-hover: 0 3px 8px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 1);
+  --neu-shadow-inset: inset 1.5px 1.5px 3px rgba(148, 163, 184, 0.18), inset -1.5px -1.5px 3px rgba(255, 255, 255, 0.95);
+  --neu-shadow-inset-focus: inset 1px 1px 2px rgba(79, 70, 229, 0.12), inset -1px -1px 2px rgba(255, 255, 255, 0.95);
+  --neu-shadow-active: inset 1.5px 1.5px 3px rgba(15, 23, 42, 0.12);
+  --shadow-modal: 0 25px 50px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.9);
 
-  /* Modal Shadow */
-  --shadow-modal: 0 20px 50px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.8);
+  /* Glass Blur Filter */
+  --glass-blur: blur(14px);
+  --glass-blur-lg: blur(20px);
 
-  /* Glass Blur */
-  --glass-blur: blur(12px);
-  --glass-blur-lg: blur(18px);
-
-  /* High-Contrast Modern Typography */
+  /* High-Contrast WCAG-Conscious Slate Typography */
   --text-main: #0f172a;       /* Slate 900 */
   --text-secondary: #334155;  /* Slate 700 */
   --text-muted: #64748b;      /* Slate 500 */
   --text-dim: #94a3b8;        /* Slate 400 */
 
-  /* Curated Accent Palette */
+  /* Curated SaaS Accent Palette */
   --accent-primary: #4f46e5;         /* Indigo 600 */
   --accent-primary-hover: #4338ca;   /* Indigo 700 */
   --accent-primary-light: rgba(79, 70, 229, 0.08);
-  --accent-secondary: #0284c7;       /* Soft Blue / Sky 600 */
+  --accent-secondary: #0284c7;       /* Sky 600 */
   --accent-secondary-light: rgba(2, 132, 199, 0.08);
   --accent-success: #059669;         /* Emerald 600 */
   --accent-success-light: rgba(5, 150, 105, 0.09);
   --accent-warning: #d97706;         /* Amber 600 */
   --accent-warning-light: rgba(217, 119, 6, 0.09);
-  --accent-danger: #dc2626;          /* Rose / Red 600 */
-  --accent-danger-light: rgba(220, 38, 38, 0.09);
+  --accent-danger: #e11d48;          /* Rose 600 */
+  --accent-danger-light: rgba(225, 29, 72, 0.09);
 
-  /* Typography & Geometry */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Geometry & Rhythm */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -74,7 +78,7 @@
 }
 
 body {
-  font-family: var(--font-family);
+  font-family: var(--font-sans);
   background: var(--bg-page-gradient);
   background-attachment: fixed;
   color: var(--text-main);
@@ -83,6 +87,12 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Tabular numbers for financial, streak, timestamp, and metrics */
+.tabular-nums, .data-table td, .kpi-value, .chart-label {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Subtle Scrollbars */
@@ -96,23 +106,23 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(186, 198, 214, 0.7);
+  background: rgba(203, 213, 225, 0.8);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.9);
+  background: rgba(148, 163, 184, 0.95);
 }
 
-/* Micro-animations */
+/* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
+  from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulseGlow {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.92); }
+  50% { opacity: 0.45; transform: scale(0.9); }
 }
 
 .fade-in {
@@ -124,7 +134,14 @@ button {
   cursor: pointer;
   border: none;
   outline: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 input, select, textarea {

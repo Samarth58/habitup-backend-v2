@@ -31,19 +31,20 @@ export function LoginPage() {
     <div className="login-wrapper">
       <div className="login-card fade-in">
         <div className="login-header">
-          <div className="login-logo">H</div>
+          <div className="login-logo" aria-hidden="true">H</div>
           <h1 className="login-title">HabitUp Admin</h1>
           <p className="login-subtitle">
-            Sign in with administrator privileges
+            Sign in with administrator credentials
           </p>
         </div>
 
-        {error && <div className="error-alert">{error}</div>}
+        {error && <div className="error-alert" role="alert">{error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Administrator Email</label>
+            <label className="form-label" htmlFor="admin-email">Administrator Email</label>
             <input
+              id="admin-email"
               type="email"
               className="form-input"
               placeholder="admin@habitup.com"
@@ -55,8 +56,9 @@ export function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label" htmlFor="admin-password">Password</label>
             <input
+              id="admin-password"
               type="password"
               className="form-input"
               placeholder="••••••••"

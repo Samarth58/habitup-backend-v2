@@ -78,16 +78,18 @@ export function UsersPage() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search by email or @username..."
+            placeholder="Search email or @username..."
             value={emailSearch}
             onChange={(e) => setEmailSearch(e.target.value)}
+            aria-label="Search by email or username"
           />
-          <button type="submit" className="pagination-btn" style={{ fontWeight: 600 }}>Search</button>
+          <button type="submit" className="pagination-btn" style={{ fontWeight: 700 }}>Search</button>
 
           <select
             className="select-input"
             value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            aria-label="Filter by role"
           >
             <option value="">All Roles</option>
             <option value="user">User</option>
@@ -98,6 +100,7 @@ export function UsersPage() {
             className="select-input"
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+            aria-label="Filter by account status"
           >
             <option value="">All Statuses</option>
             <option value="active">Active</option>
@@ -108,17 +111,19 @@ export function UsersPage() {
             className="select-input"
             value={sortField}
             onChange={(e) => setSortField(e.target.value)}
+            aria-label="Sort by field"
           >
-            <option value="created_at">Created Date</option>
-            <option value="username">Username</option>
-            <option value="email">Email</option>
-            <option value="last_activity">Last Activity</option>
+            <option value="created_at">Sort: Created Date</option>
+            <option value="username">Sort: Username</option>
+            <option value="email">Sort: Email</option>
+            <option value="last_activity">Sort: Last Activity</option>
           </select>
 
           <select
             className="select-input"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
+            aria-label="Sort order"
           >
             <option value="desc">Desc (Newest)</option>
             <option value="asc">Asc (Oldest)</option>
@@ -133,7 +138,7 @@ export function UsersPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>User</th>
+              <th>User Account</th>
               <th>Role</th>
               <th>Status</th>
               <th>Habits</th>
@@ -161,20 +166,20 @@ export function UsersPage() {
               users.map((u) => (
                 <tr key={u.id} onClick={() => setSelectedUserId(u.id)}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div className="avatar">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <div className="avatar" aria-hidden="true">
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{u.name}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.name}</span>
                           {u.username && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
                               @{u.username}
                             </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{u.email}</div>
                       </div>
                     </div>
                   </td>
@@ -188,11 +193,11 @@ export function UsersPage() {
                       {u.status || (u.deleted_at ? 'deleted' : 'active')}
                     </span>
                   </td>
-                  <td style={{ fontWeight: 600 }}>{u.total_habits ?? 0}</td>
-                  <td style={{ fontWeight: 600 }}>{u.total_completions ?? 0}</td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{formatDuration(u.estimated_usage_seconds)}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  <td className="tabular-nums" style={{ fontWeight: 700 }}>{u.total_habits ?? 0}</td>
+                  <td className="tabular-nums" style={{ fontWeight: 700 }}>{u.total_completions ?? 0}</td>
+                  <td className="tabular-nums" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{formatDuration(u.estimated_usage_seconds)}</td>
+                  <td className="tabular-nums" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="tabular-nums" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                     {u.last_activity_at
                       ? new Date(u.last_activity_at).toLocaleDateString()
                       : '—'}

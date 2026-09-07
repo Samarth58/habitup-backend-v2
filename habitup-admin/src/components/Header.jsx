@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export function Header({ title, onToggleCollapse, onToggleMobile }) {
+export function Header({ title, onToggleCollapse }) {
   const { user, logout, lastHeartbeat } = useAuth();
 
   return (
@@ -14,7 +14,7 @@ export function Header({ title, onToggleCollapse, onToggleMobile }) {
             aria-label="Toggle sidebar collapse"
             title="Toggle Sidebar"
           >
-            ☰
+            <span aria-hidden="true">☰</span>
           </button>
         )}
         <h1 className="header-title">{title}</h1>
@@ -22,14 +22,14 @@ export function Header({ title, onToggleCollapse, onToggleMobile }) {
 
       <div className="header-actions">
         {lastHeartbeat && (
-          <div className="heartbeat-badge" title="Live Session Heartbeat Active">
-            <div className="heartbeat-dot"></div>
-            <span>Live • {lastHeartbeat}</span>
+          <div className="heartbeat-badge" title="Live session heartbeat active">
+            <div className="heartbeat-dot" aria-hidden="true"></div>
+            <span className="tabular-nums">Live • {lastHeartbeat}</span>
           </div>
         )}
 
         <div className="user-profile-badge">
-          <div className="avatar">
+          <div className="avatar" aria-hidden="true">
             {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className="user-info">

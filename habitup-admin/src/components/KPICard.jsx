@@ -5,12 +5,14 @@ export function KPICard({ title, value, icon, badgeText, badgeType = 'info', not
     <div className="kpi-card fade-in">
       <div className="kpi-header">
         <span className="kpi-title">{title}</span>
-        <div className="kpi-icon">
-          {icon}
-        </div>
+        {icon && (
+          <div className="kpi-icon" aria-hidden="true">
+            {icon}
+          </div>
+        )}
       </div>
 
-      <div className="kpi-value">{value ?? '—'}</div>
+      <div className="kpi-value tabular-nums">{value ?? '—'}</div>
 
       {(badgeText || note) && (
         <div className="kpi-footer">

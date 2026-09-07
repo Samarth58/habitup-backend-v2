@@ -76,13 +76,15 @@ export function ActivityPage() {
             placeholder="Filter by User UUID..."
             value={userIdFilter}
             onChange={(e) => setUserIdFilter(e.target.value)}
+            aria-label="Filter by user UUID"
           />
-          <button type="submit" className="pagination-btn" style={{ fontWeight: 600 }}>Filter User</button>
+          <button type="submit" className="pagination-btn" style={{ fontWeight: 700 }}>Filter User</button>
 
           <select
             className="select-input"
             value={activityType}
             onChange={(e) => { setActivityType(e.target.value); setPage(1); }}
+            aria-label="Filter by event type"
           >
             <option value="">All Event Types</option>
             <option value="LOGIN">LOGIN</option>
@@ -124,7 +126,7 @@ export function ActivityPage() {
             ) : (
               events.map((ev) => (
                 <tr key={ev.id}>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  <td className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                     {new Date(ev.created_at).toLocaleString()}
                   </td>
                   <td>
@@ -132,12 +134,12 @@ export function ActivityPage() {
                       {ev.activity_type}
                     </span>
                   </td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
                     {ev.user_id || 'System'}
                   </td>
                   <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                     {ev.metadata ? (
-                      <span className="neu-inset-tile" style={{ display: 'inline-block', padding: '0.2rem 0.5rem', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                      <span className="neu-inset-tile" style={{ display: 'inline-block', padding: '0.25rem 0.55rem', fontSize: '0.75rem', fontFamily: 'var(--font-mono)' }}>
                         {JSON.stringify(ev.metadata)}
                       </span>
                     ) : '—'}

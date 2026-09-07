@@ -42,8 +42,11 @@ export function DashboardPage() {
         </div>
 
         <div className="filter-group">
-          <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>Period:</label>
+          <label htmlFor="dashboard-period-select" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+            Period:
+          </label>
           <select
+            id="dashboard-period-select"
             className="select-input"
             value={period}
             onChange={(e) => setPeriod(e.target.value)}
@@ -110,35 +113,41 @@ export function DashboardPage() {
 
           {/* Session Usage Summary Card */}
           <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
               ⏱️ Session & Usage Duration Analytics
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
               <div className="neu-inset-tile">
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>TOTAL SESSIONS IN PERIOD</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-primary)', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                  TOTAL SESSIONS IN PERIOD
+                </div>
+                <div className="tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-primary)', marginTop: '0.25rem' }}>
                   {metrics.sessions?.total_in_period ?? 0}
                 </div>
               </div>
 
               <div className="neu-inset-tile">
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED TOTAL USAGE</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-success)', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                  ESTIMATED TOTAL USAGE
+                </div>
+                <div className="tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-success)', marginTop: '0.25rem' }}>
                   {formatSeconds(metrics.sessions?.estimated_total_usage_seconds)}
                 </div>
               </div>
 
               <div className="neu-inset-tile">
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>ESTIMATED AVG SESSION</div>
-                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-warning)', marginTop: '0.2rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+                  ESTIMATED AVG SESSION
+                </div>
+                <div className="tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-warning)', marginTop: '0.25rem' }}>
                   {formatSeconds(metrics.sessions?.estimated_avg_duration_seconds)}
                 </div>
               </div>
             </div>
 
             {metrics.sessions?.usage_note && (
-              <div style={{ marginTop: '1.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(218, 226, 237, 0.7)', paddingTop: '0.85rem' }}>
+              <div style={{ marginTop: '1.25rem', fontSize: '0.82rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '0.85rem' }}>
                 📌 <strong>Usage Note:</strong> {metrics.sessions.usage_note}
               </div>
             )}
