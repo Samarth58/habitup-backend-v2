@@ -23,6 +23,17 @@ export function UserDetailModal({ userId, onClose }) {
       });
   }, [userId]);
 
+  useEffect(() => {
+    if (!userId) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userId, onClose]);
+
   if (!userId) return null;
 
   const formatDuration = (seconds) => {

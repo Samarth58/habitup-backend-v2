@@ -65,7 +65,7 @@ function SectionSubtitle({ children }) {
 
 function CompareRow({ label, controlVal, treatmentVal, highlight = false }) {
   return (
-    <tr style={highlight ? { background: 'var(--primary-light, rgba(79,70,229,0.05))' } : {}}>
+    <tr style={highlight ? { background: 'var(--accent-primary-light, rgba(79,70,229,0.08))' } : {}}>
       <td style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{label}</td>
       <td className="tabular-nums" style={{ color: 'var(--text-main)', fontWeight: highlight ? 800 : 600 }}>
         {controlVal ?? '—'}
@@ -313,7 +313,7 @@ export function ExperimentsPage() {
                   {pct(control?.d7Retention)}
                 </td>
               </tr>
-              <tr style={{ background: 'var(--primary-light, rgba(79,70,229,0.04))' }}>
+              <tr style={{ background: 'var(--accent-primary-light, rgba(79,70,229,0.04))' }}>
                 <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
                   🟢 Treatment (Variant B)
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>Friends Enabled</div>
@@ -321,12 +321,12 @@ export function ExperimentsPage() {
                 <td className="tabular-nums" style={{ fontWeight: 700 }}>{treatment?.users ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d1Eligible ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d1Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: '#16a34a' }}>
+                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success, #059669)' }}>
                   {pct(treatment?.d1Retention)}
                 </td>
                 <td className="tabular-nums">{treatment?.d7Eligible ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d7Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: '#16a34a' }}>
+                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success, #059669)' }}>
                   {pct(treatment?.d7Retention)}
                 </td>
               </tr>
