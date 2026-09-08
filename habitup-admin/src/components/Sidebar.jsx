@@ -6,6 +6,7 @@ export function Sidebar({ currentTab, setCurrentTab, isCollapsed, isMobileOpen, 
     { id: 'users', label: 'Users', icon: '👥' },
     { id: 'activity', label: 'Activity', icon: '⚡' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },
+    { id: 'experiments', label: 'Experiments', icon: '🧪' },
   ];
 
   const handleNavClick = (id) => {

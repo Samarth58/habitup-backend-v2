@@ -6,6 +6,8 @@ const {
   getActivity,
   getUsageAnalytics,
   getActivityAnalytics,
+  listAllExperiments,
+  getExperimentReport,
 } = require('../controllers/adminController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
@@ -240,5 +242,47 @@ router.get('/analytics/usage', getUsageAnalytics);
  *         description: Forbidden
  */
 router.get('/analytics/activity', getActivityAnalytics);
+
+/**
+ * @swagger
+ * /admin/experiments:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List all experiments and their basic statistics
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of experiments
+ *       401: { description: Unauthorized }
+ *       403: { description: Forbidden }
+ */
+router.get('/experiments', listAllExperiments);
+
+/**
+ * @swagger
+ * /admin/experiments/{name}:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Full A/B experiment analytics report for the named experiment
+ *     description: |
+ *       Returns control vs treatment comparison, D1/D7 retention, habit engagement,
+ *       friends engagement, and statistical significance (two-proportion Z-test).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema: { type: string }
+ *         example: friends_feature_v1
+ *     responses:
+ *       200:
+ *         description: Experiment analytics report
+ *       401: { description: Unauthorized }
+ *       403: { description: Forbidden }
+ *       404: { description: Experiment not found }
+ */
+router.get('/experiments/:name', getExperimentReport);
 
 module.exports = router;

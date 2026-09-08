@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { UsersPage } from './pages/UsersPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { ExperimentsPage } from './pages/ExperimentsPage';
 import './App.css';
 
 function MainLayout() {
@@ -37,6 +38,8 @@ function MainLayout() {
         return <ActivityPage />;
       case 'analytics':
         return <AnalyticsPage />;
+      case 'experiments':
+        return <ExperimentsPage />;
       default:
         return <DashboardPage />;
     }
@@ -48,6 +51,7 @@ function MainLayout() {
       case 'users': return 'User Directory';
       case 'activity': return 'Audit Activity Feed';
       case 'analytics': return 'Usage Analytics & Trends';
+      case 'experiments': return 'A/B Experiments';
       default: return 'HabitUp Dashboard';
     }
   };

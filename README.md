@@ -41,6 +41,14 @@ A Node.js/Express/PostgreSQL backend for HabitUp, a daily habit tracker mobile a
 ### Statistics
 - Per-habit and aggregate metrics, including completion rates, total completion counts, current streaks, and longest streaks.
 
+### A/B Experimentation Framework
+- Production-grade, generic randomized A/B experimentation system for feature rollout and validation.
+- Initial experiment `friends_feature_v1`: Evaluates the Friends feature against Day-1 / Day-7 retention and habit engagement.
+- Exact retention window evaluation ($D_1 \in [T_0+24\text{h}, T_0+48\text{h})$, $D_7 \in [T_0+168\text{h}, T_0+192\text{h})$).
+- Two-proportion Z-test statistical significance engine ($\alpha=0.05$, 95% CI).
+- Full Admin Dashboard integration with live KPI comparisons and automated verdict determination.
+- See [`EXPERIMENTATION.md`](./EXPERIMENTATION.md) for complete architectural documentation.
+
 ---
 
 ## Getting Started

@@ -25,6 +25,11 @@ const ALLOWED_ACTIVITY_TYPES = new Set([
   'PASSWORD_RESET_REQUESTED',
   'PASSWORD_RESET_COMPLETED',
   'ACCOUNT_DELETED',
+  'FRIENDS_EXPERIMENT_EXPOSED',
+  'EXPERIMENT_EXPOSURE',
+  'FRIEND_REQUEST_SENT',
+  'FRIEND_REQUEST_ACCEPTED',
+  'FRIEND_REMOVED',
 ]);
 
 const ALLOWED_METADATA_KEYS = {
@@ -40,6 +45,11 @@ const ALLOWED_METADATA_KEYS = {
   REMINDER_CREATED: ['reminder_id', 'habit_id'],
   REMINDER_UPDATED: ['reminder_id'],
   REMINDER_DELETED: ['reminder_id'],
+  FRIENDS_EXPERIMENT_EXPOSED: ['experiment', 'variant', 'experiment_id'],
+  EXPERIMENT_EXPOSURE: ['experiment', 'variant', 'experiment_id'],
+  FRIEND_REQUEST_SENT: ['request_id', 'recipient_id', 'recipient_username'],
+  FRIEND_REQUEST_ACCEPTED: ['request_id', 'friendship_id', 'requester_id'],
+  FRIEND_REMOVED: ['friend_id', 'friendship_id'],
 };
 
 /**

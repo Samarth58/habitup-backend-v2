@@ -11,6 +11,14 @@ const {
   getActivityAggregates,
 } = require('../services/activityService');
 
+const {
+  getExperimentAnalytics,
+} = require('../services/experimentAnalyticsService');
+
+const {
+  listExperiments,
+} = require('../services/experimentService');
+
 /**
  * GET /admin/dashboard
  * Query params: ?period=7d|30d|90d|365d (default: 7d)
@@ -134,6 +142,39 @@ async function getActivityAnalytics(req, res) {
   }
 }
 
+/**
+ * GET /admin/experiments
+ * Lists all experiments with basic statistics.
+ */
+async function listAllExperiments(req, res) {
+  try {
+    const experiments = await listExperiments();
+    return res.json({ experiments });
+  } catch (err) {
+    console.error('[listAllExperiments]', err);
+    return res.status(500).json({ error: 'Failed to list experiments.' });
+  }
+}
+
+/**
+ * GET /admin/experiments/:name
+ * Returns full statistical analytics for a named experiment.
+ */
+async function getExperimentReport(req, res) {
+  const { name } = req.params;
+
+  try {
+    const report = await getExperimentAnalytics(name);
+    return res.json(report);
+  } catch (err) {
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ error: err.message });
+    }
+    console.error('[getExperimentReport]', err);
+    return res.status(500).json({ error: 'Failed to fetch experiment analytics.' });
+  }
+}
+
 module.exports = {
   getDashboard,
   listUsers,
@@ -141,4 +182,6 @@ module.exports = {
   getActivity,
   getUsageAnalytics,
   getActivityAnalytics,
+  listAllExperiments,
+  getExperimentReport,
 };

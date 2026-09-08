@@ -8,6 +8,7 @@ const {
 } = require('./habitService');
 const { calculateBestStreak, getUserOverallStats } = require('./statsService');
 const { calculateStreak } = require('./streakService');
+const { logActivity } = require('./activityService');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -72,6 +73,12 @@ async function sendFriendRequest(requesterId, recipientUsername) {
       [requesterId, recipient.id]
     );
 
+  logActivity(requesterId, 'FRIEND_REQUEST_SENT', {
+    request_id: result.rows[0].request_id,
+    recipient_id: recipient.id,
+    recipient_username: recipient.username,
+  }).catch((err) => console.error('[sendFriendRequest activity]', err));
+
   return { ...result.rows[0], to_username: recipient.username };
 }
 
@@ -116,6 +123,13 @@ async function acceptFriendRequest(requestId, userId) {
       [requestId]
     );
     await client.query('COMMIT');
+
+    logActivity(userId, 'FRIEND_REQUEST_ACCEPTED', {
+      request_id: requestId,
+      friendship_id: friendshipRows[0].friendship_id,
+      requester_id: request.requester_id,
+    }).catch((err) => console.error('[acceptFriendRequest activity]', err));
+
     return friendshipRows[0];
   } catch (error) {
     await client.query('ROLLBACK');
@@ -177,6 +191,12 @@ async function removeFriend(userId, friendId) {
     [userId, friendId]
   );
   if (!rows[0]) throw serviceError('Friend not found or not friends', 404);
+
+  logActivity(userId, 'FRIEND_REMOVED', {
+    friend_id: friendId,
+    friendship_id: rows[0].friendship_id,
+  }).catch((err) => console.error('[removeFriend activity]', err));
+
   return { message: 'Friend removed', friendship_id: rows[0].friendship_id };
 }
 

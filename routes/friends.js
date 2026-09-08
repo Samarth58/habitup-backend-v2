@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { validateUuid } = require('../middleware/validateUuid');
+const { requireFriendsFeatureEnabled } = require('../middleware/experimentMiddleware');
 const {
   sendFriendRequest,
   getPendingRequests,
@@ -13,7 +14,8 @@ const {
 } = require('../controllers/friendController');
 
 const router = Router();
-router.use(requireAuth);
+// requireAuth must run first (attaches req.userId), then experiment gate
+router.use(requireAuth, requireFriendsFeatureEnabled);
 
 /**
  * @swagger

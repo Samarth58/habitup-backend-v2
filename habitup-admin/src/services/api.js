@@ -145,4 +145,12 @@ export const api = {
 
     return apiRequest(`/admin/analytics/activity?${query.toString()}`);
   },
+
+  async listExperiments() {
+    return apiRequest('/admin/experiments');
+  },
+
+  async getExperimentAnalytics(name = 'friends_feature_v1') {
+    return apiRequest(`/admin/experiments/${encodeURIComponent(name)}`);
+  },
 };

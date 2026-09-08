@@ -61,6 +61,7 @@ app.use('/users', require('./routes/users'));
 app.use('/habits', require('./routes/habits'));
 app.use('/reminders', require('./routes/reminders'));
 app.use('/friends', require('./routes/friends'));
+app.use('/experiments', require('./routes/experiments'));
 app.use('/admin', require('./routes/admin'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
