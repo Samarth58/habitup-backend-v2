@@ -63,6 +63,7 @@ app.use('/reminders', require('./routes/reminders'));
 app.use('/friends', require('./routes/friends'));
 app.use('/experiments', require('./routes/experiments'));
 app.use('/admin', require('./routes/admin'));
+app.use('/notifications', require('./routes/notifications'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
 const PORT = process.env.PORT || 5000;
