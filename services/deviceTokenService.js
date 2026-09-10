@@ -68,8 +68,27 @@ async function deleteDeviceToken(token) {
   return rowCount > 0;
 }
 
+/**
+ * Finds a specific device token registered to a specific user.
+ *
+ * @param {string} userId - User UUID
+ * @param {string} token - FCM device token string
+ * @returns {Promise<object|null>} The device token row or null if not found
+ */
+async function findDeviceTokenByUser(userId, token) {
+  const query = `
+    SELECT id, user_id, token, platform, timezone, created_at, updated_at
+    FROM device_tokens
+    WHERE user_id = $1 AND token = $2;
+  `;
+
+  const { rows } = await pool.query(query, [userId, token]);
+  return rows[0] || null;
+}
+
 module.exports = {
   upsertDeviceToken,
   getDeviceTokensByUserId,
+  findDeviceTokenByUser,
   deleteDeviceToken,
 };

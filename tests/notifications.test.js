@@ -370,4 +370,157 @@ describe('Notifications API - Device Token Registration', () => {
       assert.ok(hasTablet, 'User should have tablet token registered');
     });
   });
+
+  describe('Test Notification Endpoint (POST /notifications/test)', () => {
+    test('unauthenticated request to /notifications/test returns 401 Unauthorized', async () => {
+      const res = await authFetch('/notifications/test', {
+        method: 'POST',
+        body: JSON.stringify({ token: 'any_fcm_token' }),
+      });
+
+      assert.equal(res.status, 401);
+      const data = await res.json();
+      assert.ok(data.error);
+    });
+
+    test('missing token returns 400 Bad Request', async () => {
+      const res = await authFetch(
+        '/notifications/test',
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+        userA.accessToken
+      );
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /token is required/i);
+    });
+
+    test('empty string token returns 400 Bad Request', async () => {
+      const res = await authFetch(
+        '/notifications/test',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: '   ' }),
+        },
+        userA.accessToken
+      );
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /token is required/i);
+    });
+
+    test('unregistered device token returns 404 Not Found', async () => {
+      const res = await authFetch(
+        '/notifications/test',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: 'completely_unregistered_fcm_token_123' }),
+        },
+        userA.accessToken
+      );
+
+      assert.equal(res.status, 404);
+      const data = await res.json();
+      assert.match(data.error, /not found or not registered/i);
+    });
+
+    test('device token belonging to another user is rejected with 404', async () => {
+      const userBToken = `fcm_user_b_private_token_${Date.now()}`;
+
+      // User B registers the token
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: userBToken, platform: 'android' }),
+        },
+        userB.accessToken
+      );
+
+      // User A attempts to trigger test notification on User B's token
+      const res = await authFetch(
+        '/notifications/test',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: userBToken }),
+        },
+        userA.accessToken
+      );
+
+      assert.equal(res.status, 404);
+      const data = await res.json();
+      assert.match(data.error, /not found or not registered/i);
+    });
+
+    test('valid registered token returns 503 if Firebase Admin SDK is not configured in test env', async () => {
+      const userAToken = `fcm_user_a_test_token_${Date.now()}`;
+
+      // Register token for User A
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: userAToken, platform: 'android' }),
+        },
+        userA.accessToken
+      );
+
+      // Attempt to send notification without Firebase configured
+      const res = await authFetch(
+        '/notifications/test',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token: userAToken }),
+        },
+        userA.accessToken
+      );
+
+      // Since Firebase env vars are not set in the test environment, should fail safely with 503
+      if (!process.env.FIREBASE_PROJECT_ID) {
+        assert.equal(res.status, 503);
+        const data = await res.json();
+        assert.match(data.error, /Firebase Admin SDK is not configured/i);
+      }
+    });
+  });
+
+  describe('Firebase & Notification Service Unit Logic', () => {
+    const { isFirebaseConfigured } = require('../services/firebaseService');
+    const { sendPushNotification } = require('../services/notificationService');
+
+    test('isFirebaseConfigured returns boolean without throwing', () => {
+      const configured = isFirebaseConfigured();
+      assert.equal(typeof configured, 'boolean');
+    });
+
+    test('sendPushNotification validates input parameters', async () => {
+      await assert.rejects(
+        () => sendPushNotification('', { title: 'Test', body: 'Body' }),
+        /Device token is required/i
+      );
+
+      await assert.rejects(
+        () => sendPushNotification('fcm_token', { title: '', body: 'Body' }),
+        /Notification title is required/i
+      );
+
+      await assert.rejects(
+        () => sendPushNotification('fcm_token', { title: 'Test', body: '' }),
+        /Notification body is required/i
+      );
+    });
+
+    test('sendPushNotification throws safe error when Firebase is unconfigured', async () => {
+      if (!isFirebaseConfigured()) {
+        await assert.rejects(
+          () => sendPushNotification('fcm_token', { title: 'Test', body: 'Body' }),
+          /Firebase Admin SDK is not configured/i
+        );
+      }
+    });
+  });
 });
