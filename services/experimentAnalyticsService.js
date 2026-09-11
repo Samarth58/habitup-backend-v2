@@ -1,10 +1,5 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { getExperiment } = require('./experimentService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 /**
  * Standard normal error function erf(x) approximation.

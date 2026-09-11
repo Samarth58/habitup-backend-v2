@@ -48,6 +48,28 @@ function runTests() {
   assertEqual(bestStreak4, 0, 'Test 4a: Best streak with zero completions is 0');
   assertEqual(rate4, 0, 'Test 4b: Completion rate with zero completions is 0%');
 
+  // Test 5: Scheduled habits calculateBestStreak and calculateCompletionRate
+  // Schedule: Sunday (0), Monday (1), Wednesday (3), Friday (5)
+  // August 2026:
+  // Sun: 2, 9, 16, 23, 30
+  // Mon: 3, 10, 17, 24, 31
+  // Wed: 5, 12, 19, 26
+  // Fri: 7, 14, 21, 28
+  const scheduleDays = [0, 1, 3, 5];
+  // 4 scheduled dates in first week: Aug 2 (Sun), Aug 3 (Mon), Aug 5 (Wed), Aug 7 (Fri)
+  const schedHistory = ['2026-08-02', '2026-08-03', '2026-08-05', '2026-08-07'];
+  const schedBestStreak = calculateBestStreak('scheduled', scheduleDays, schedHistory, 'UTC');
+  assertEqual(schedBestStreak, 4, 'Test 5a: Scheduled [0, 1, 3, 5] best streak is 4');
+
+  // Completed all 4 scheduled days out of 4 elapsed scheduled days by Aug 7 -> 100%
+  const schedRate = calculateCompletionRate('scheduled', scheduleDays, schedHistory, 'UTC', '2026-08-01', '2026-08-07', '2026-08-07');
+  assertEqual(schedRate, 100, 'Test 5b: Scheduled completion rate is 100% for completed week');
+
+  // Completed 2 of 4 scheduled days -> 50%
+  const partialHistory = ['2026-08-02', '2026-08-03'];
+  const partialRate = calculateCompletionRate('scheduled', scheduleDays, partialHistory, 'UTC', '2026-08-01', '2026-08-07', '2026-08-07');
+  assertEqual(partialRate, 50, 'Test 5c: Scheduled completion rate is 50% for 2/4 completed days');
+
   console.log('\n----------------------------------------');
   console.log('ALL STATS SERVICE UNIT TESTS PASSED!');
   console.log('----------------------------------------');

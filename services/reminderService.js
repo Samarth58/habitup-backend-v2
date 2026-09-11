@@ -1,9 +1,4 @@
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+const { pool } = require('./db');
 
 /**
  * Inserts a new reminder for a habit, verifying habit ownership first.

@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { getUserByUsername } = require('./usernameService');
 const {
   getHabitSchedule,
@@ -9,11 +9,6 @@ const {
 const { calculateBestStreak, getUserOverallStats } = require('./statsService');
 const { calculateStreak } = require('./streakService');
 const { logActivity } = require('./activityService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 function serviceError(message, status) {
   const error = new Error(message);

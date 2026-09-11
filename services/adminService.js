@@ -1,11 +1,6 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { calculateStreak } = require('./streakService');
 const { calculateBestStreak } = require('./statsService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 const MAX_SESSION_GAP_MINUTES = parseInt(process.env.MAX_SESSION_GAP_MINUTES, 10) || 120;
 

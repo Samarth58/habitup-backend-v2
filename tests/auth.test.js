@@ -24,12 +24,14 @@ describe('Auth API Endpoints', () => {
   describe('POST /auth/register', () => {
     test('successful user registration returns 201 and access token', async () => {
       const email = `auth_reg_${Date.now()}@example.com`;
+      const username = `user_${Date.now()}`.slice(0, 30);
       const res = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'Auth Test User',
           email,
+          username,
           password: 'Password123!',
           timezone: 'UTC',
         }),
@@ -61,12 +63,14 @@ describe('Auth API Endpoints', () => {
     });
 
     test('duplicate email registration returns 409', async () => {
+      const uniqueUsername = `uniq_${Date.now()}`.slice(0, 30);
       const res = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: 'Duplicate User',
           email: sharedUser.email,
+          username: uniqueUsername,
           password: 'Password123!',
           timezone: 'UTC',
         }),
@@ -214,6 +218,116 @@ describe('Auth API Endpoints', () => {
     test('returns 401 without authentication token', async () => {
       const res = await fetch(`${BASE_URL}/auth/me`);
       assert.equal(res.status, 401);
+    });
+  });
+
+  describe('Password Reset Workflow', () => {
+    const crypto = require('crypto');
+    const { Pool } = require('pg');
+    const testPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+
+    test('POST /auth/reset-password/request returns generic 200 message', async () => {
+      const res = await fetch(`${BASE_URL}/auth/reset-password/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sharedUser.email }),
+      });
+
+      const body = await res.json();
+      assert.equal(res.status, 200);
+      assert.ok(body.message);
+      assert.match(body.message, /password reset link has been sent/i);
+    });
+
+    test('confirming with valid token resets password and revokes existing sessions', async () => {
+      const resetUser = await registerTestUser({ password: 'InitialPass123!' });
+      const { refreshToken: activeRefreshToken } = await loginAsSharedUser(resetUser);
+
+      // Create raw token and insert SHA-256 hash into DB
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+      await testPool.query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+        [resetUser.user.id, tokenHash, expiresAt]
+      );
+
+      // Confirm password reset
+      const resetRes = await fetch(`${BASE_URL}/auth/reset-password/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: rawToken, newPassword: 'BrandNewPassword456!' }),
+      });
+
+      const resetBody = await resetRes.json();
+      assert.equal(resetRes.status, 200);
+      assert.match(resetBody.message, /password has been reset/i);
+
+      // Old password must fail
+      const oldLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetUser.email, password: 'InitialPass123!' }),
+      });
+      assert.equal(oldLoginRes.status, 401);
+
+      // Old refresh token must be revoked
+      const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: activeRefreshToken }),
+      });
+      assert.equal(refreshRes.status, 401);
+
+      // New password must succeed
+      const newLoginRes = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resetUser.email, password: 'BrandNewPassword456!' }),
+      });
+      assert.equal(newLoginRes.status, 200);
+
+      // Reusing the same token must fail (used_at is not null)
+      const reuseRes = await fetch(`${BASE_URL}/auth/reset-password/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: rawToken, newPassword: 'AnotherPassword789!' }),
+      });
+      assert.equal(reuseRes.status, 400);
+    });
+
+    test('confirming with invalid or nonexistent token returns 400', async () => {
+      const res = await fetch(`${BASE_URL}/auth/reset-password/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: 'completely_invalid_token_12345', newPassword: 'NewPass123!' }),
+      });
+
+      assert.equal(res.status, 400);
+      const body = await res.json();
+      assert.ok(body.error);
+    });
+
+    test('confirming with expired token returns 400', async () => {
+      const expiredUser = await registerTestUser();
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiredAt = new Date(Date.now() - 60 * 1000); // 1 minute in the past
+
+      await testPool.query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)`,
+        [expiredUser.user.id, tokenHash, expiredAt]
+      );
+
+      const res = await fetch(`${BASE_URL}/auth/reset-password/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: rawToken, newPassword: 'NewPass123!' }),
+      });
+
+      assert.equal(res.status, 400);
+      await testPool.end();
     });
   });
 });

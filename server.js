@@ -3,9 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { Pool } = require('pg');
 const { requireAuth } = require('./middleware/authMiddleware');
 const { getUserStatsHandler } = require('./controllers/habitController');
+const { pool } = require('./services/db');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
@@ -14,11 +14,6 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
-
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-});
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {

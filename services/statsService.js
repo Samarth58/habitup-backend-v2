@@ -1,19 +1,14 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { calculateStreak } = require('./streakService');
 const { getHabitById, getHabitSchedule, getCompletionDates, getHabitsForUser } = require('./habitService');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
-
 /**
- * Returns integer day of week where 0 = Monday ... 6 = Sunday for a "YYYY-MM-DD" date string.
+ * Returns integer day of week where 0 = Sunday ... 6 = Saturday for a "YYYY-MM-DD" date string.
+ * Uses standard JavaScript Date.getUTCDay() indexing.
  */
 function getDayOfWeek(dateStr) {
   const d = new Date(`${dateStr}T00:00:00Z`);
-  const utcDay = d.getUTCDay();
-  return (utcDay + 6) % 7;
+  return d.getUTCDay();
 }
 
 /**

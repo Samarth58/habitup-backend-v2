@@ -131,4 +131,30 @@ describe('Completions & Streaks API Endpoints', () => {
     const completeRes = await authFetch(`/habits/${habit.id}/completions`, { method: 'POST' }, user.accessToken);
     assert.equal(completeRes.status, 201);
   });
+
+  test('scheduled habit supports Sunday (0), Monday (1), Wednesday (3), Friday (5)', async () => {
+    const habitRes = await authFetch(
+      '/habits',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'Sun Mon Wed Fri Workout',
+          frequency_type: 'scheduled',
+          days: [0, 1, 3, 5],
+        }),
+      },
+      user.accessToken
+    );
+
+    const { habit } = await habitRes.json();
+    assert.equal(habitRes.status, 201);
+    assert.equal(habit.frequency_type, 'scheduled');
+    assert.deepEqual(habit.schedule, [0, 1, 3, 5]);
+
+    // Fetch by ID to confirm schedule persists
+    const getRes = await authFetch(`/habits/${habit.id}`, { method: 'GET' }, user.accessToken);
+    const getBody = await getRes.json();
+    assert.equal(getRes.status, 200);
+    assert.deepEqual(getBody.habit.schedule, [0, 1, 3, 5]);
+  });
 });

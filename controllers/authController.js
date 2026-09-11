@@ -48,48 +48,75 @@ function signRefreshToken(userId) {
 // ─── Handlers ─────────────────────────────────────────────────────────────────
 
 /**
+ * Shared registration service function used by both /auth/register and /users/register.
+ */
+async function handleUserRegistration({ name, email, username, password, timezone }, req = null) {
+  if (!email || !password || !username) {
+    const err = new Error('email, username, and password are required.');
+    err.status = 400;
+    throw err;
+  }
+
+  // 1. Validate username format & length
+  validateUsername(username);
+
+  // 2. Check username availability
+  const usernameAvailable = await checkUsernameAvailable(username);
+  if (!usernameAvailable) {
+    const err = new Error('Username already taken');
+    err.status = 409;
+    throw err;
+  }
+
+  // 3. Check email availability
+  const existing = await findUserByEmail(email);
+  if (existing) {
+    const err = new Error('Email already in use.');
+    err.status = 409;
+    throw err;
+  }
+
+  const displayName = name || username;
+  const userTimezone = timezone || 'UTC';
+  const user = await createUser({ name: displayName, email, username, password, timezone: userTimezone });
+
+  if (req) {
+    try {
+      require('../services/activityService').logActivity(user.id, 'REGISTER', {}, req);
+    } catch (_) {}
+  }
+
+  const accessToken = signAccessToken(user.id, user.email);
+  const { token: refreshToken, jti } = signRefreshToken(user.id);
+  const refreshTokenHash = await argon2.hash(jti);
+  const expiresAt = new Date(Date.now() + REFRESH_EXPIRY_MS);
+  await createSession(user.id, refreshTokenHash, expiresAt);
+
+  return {
+    accessToken,
+    access_token: accessToken,
+    refreshToken,
+    refresh_token: refreshToken,
+    user,
+  };
+}
+
+/**
  * POST /auth/register
  * Body: { name, email, username, password, timezone }
  *
- * Returns access token (and refresh token) with user.
+ * Returns access token and refresh token with user.
  */
 async function register(req, res) {
-  const { name, email, username, password, timezone } = req.body;
-
-  if (!email || !password || !username) {
-    return res.status(400).json({ error: 'email, username, and password are required.' });
-  }
-
   try {
-    // 1. Validate username format & length
-    validateUsername(username);
-
-    // 2. Check username availability
-    const usernameAvailable = await checkUsernameAvailable(username);
-    if (!usernameAvailable) {
-      return res.status(409).json({ error: 'Username already taken' });
-    }
-
-    // 3. Check email availability
-    const existing = await findUserByEmail(email);
-    if (existing) {
-      return res.status(409).json({ error: 'Email already in use.' });
-    }
-
-    const displayName = name || username;
-    const userTimezone = timezone || 'UTC';
-    const user        = await createUser({ name: displayName, email, username, password, timezone: userTimezone });
-    require('../services/activityService').logActivity(user.id, 'REGISTER', {}, req);
-    const accessToken = signAccessToken(user.id, user.email);
-
-    return res.status(201).json({
-      accessToken,
-      access_token: accessToken,
-      user,
-    });
+    const result = await handleUserRegistration(req.body, req);
+    return res.status(201).json(result);
   } catch (err) {
     if (err.status === 400) {
       return res.status(400).json({ error: err.message });
+    }
+    if (err.status === 409) {
+      return res.status(409).json({ error: err.message });
     }
     console.error('[register]', err);
     return res.status(500).json({ error: 'Registration failed.' });
@@ -395,6 +422,7 @@ async function heartbeat(req, res) {
 }
 
 module.exports = {
+  handleUserRegistration,
   register,
   login,
   refresh,

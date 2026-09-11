@@ -1,10 +1,5 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { logActivity } = require('./activityService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 /**
  * Retrieves experiment record by name from the database.

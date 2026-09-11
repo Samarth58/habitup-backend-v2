@@ -1,96 +1,25 @@
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const argon2 = require('argon2');
-const { Pool } = require('pg');
+const { pool } = require('../services/db');
 const {
   validateUsername,
   checkUsernameAvailable,
   getUserPublicProfile,
 } = require('../services/usernameService');
-const {
-  createUser,
-  findUserByEmail,
-  createSession,
-} = require('../services/authService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
-
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-const REFRESH_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-function signAccessToken(userId, email) {
-  return jwt.sign({ sub: userId, email }, ACCESS_SECRET, { expiresIn: '15m' });
-}
-
-function signRefreshToken(userId) {
-  const jti = crypto.randomBytes(64).toString('hex');
-  const token = jwt.sign({ sub: userId, jti }, REFRESH_SECRET, { expiresIn: '30d' });
-  return { token, jti };
-}
+const { handleUserRegistration } = require('./authController');
 
 /**
  * POST /users/register or registerWithUsername
  * Registers a user with unique username, email, password.
  */
 async function registerWithUsername(req, res) {
-  const { email, password, username, name, timezone } = req.body;
-
-  if (!email || !password || !username) {
-    return res.status(400).json({ error: 'email, password, and username are required.' });
-  }
-
   try {
-    // 1. Validate username format & length
-    validateUsername(username);
-
-    // 2. Check username availability
-    const available = await checkUsernameAvailable(username);
-    if (!available) {
-      return res.status(409).json({ error: 'Username already taken' });
-    }
-
-    // 3. Check email availability
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      return res.status(409).json({ error: 'Email already in use.' });
-    }
-
-    // 4. Create user (stored as lowercase username)
-    const displayName = name || username;
-    const userTimezone = timezone || 'UTC';
-    const user = await createUser({
-      name: displayName,
-      email,
-      username,
-      password,
-      timezone: userTimezone,
-    });
-
-    // 5. Generate tokens and session
-    const accessToken = signAccessToken(user.id, user.email);
-    const { token: refreshToken, jti } = signRefreshToken(user.id);
-    const refreshTokenHash = await argon2.hash(jti);
-    const expiresAt = new Date(Date.now() + REFRESH_EXPIRY_MS);
-    await createSession(user.id, refreshTokenHash, expiresAt);
-
-    return res.status(201).json({
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-      },
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      accessToken,
-      refreshToken,
-    });
+    const result = await handleUserRegistration(req.body, req);
+    return res.status(201).json(result);
   } catch (err) {
     if (err.status === 400) {
       return res.status(400).json({ error: err.message });
+    }
+    if (err.status === 409) {
+      return res.status(409).json({ error: err.message });
     }
     console.error('[registerWithUsername]', err);
     return res.status(500).json({ error: 'Registration failed.' });

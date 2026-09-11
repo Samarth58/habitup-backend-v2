@@ -10,14 +10,14 @@ function getPreviousDateStr(dateStr) {
 }
 
 /**
- * Returns integer day of week where 0 = Monday ... 6 = Sunday for a "YYYY-MM-DD" date string.
+ * Returns integer day of week where 0 = Sunday ... 6 = Saturday for a "YYYY-MM-DD" date string.
+ * Uses standard JavaScript Date.getUTCDay() indexing.
  * @param {string} dateStr "YYYY-MM-DD"
- * @returns {number} 0 (Mon) to 6 (Sun)
+ * @returns {number} 0 (Sun) to 6 (Sat)
  */
 function getDayOfWeek(dateStr) {
   const d = new Date(`${dateStr}T00:00:00Z`);
-  const utcDay = d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  return (utcDay + 6) % 7;     // 0 = Monday, 1 = Tuesday, ..., 6 = Sunday
+  return d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
 }
 
 /**

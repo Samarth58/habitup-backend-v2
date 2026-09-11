@@ -1,10 +1,5 @@
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { calculateStreak } = require('./streakService');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 /**
  * Validates username length and format.

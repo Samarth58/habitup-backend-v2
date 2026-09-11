@@ -196,30 +196,6 @@ router.post('/logout-all', requireAuth, logoutAll);
 
 /**
  * @swagger
- * /auth/session/heartbeat:
- *   post:
- *     tags: [Auth]
- *     summary: Record activity for the authenticated refresh session
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [refreshToken]
- *             properties:
- *               refreshToken: { type: string }
- *     responses:
- *       200: { description: Session activity recorded }
- *       400: { description: Invalid or missing refresh token }
- *       404: { description: Session missing or revoked }
- */
-router.post('/session/heartbeat', requireAuth, heartbeatLimiter, heartbeat);
-
-/**
- * @swagger
  * /auth/me:
  *   get:
  *     tags: [Auth]

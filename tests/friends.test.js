@@ -1,6 +1,25 @@
 const { test, describe, before } = require('node:test');
 const assert = require('node:assert/strict');
+const { Pool } = require('pg');
 const { registerTestUser, authFetch, INVALID_UUID, VALID_UUID } = require('./helpers');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
+
+async function enableFriendsForUser(userId) {
+  const { rows } = await pool.query("SELECT id FROM experiments WHERE name = 'friends_feature_v1'");
+  if (rows.length > 0) {
+    const experimentId = rows[0].id;
+    await pool.query(
+      `INSERT INTO user_experiments (user_id, experiment_id, variant)
+       VALUES ($1, $2, 'B')
+       ON CONFLICT (user_id, experiment_id) DO UPDATE SET variant = 'B'`,
+      [userId, experimentId]
+    );
+  }
+}
 
 describe('Friends API', () => {
   let alice;
@@ -12,6 +31,9 @@ describe('Friends API', () => {
     alice = await registerTestUser({ username: `alice_${Date.now()}`.slice(0, 30) });
     bob = await registerTestUser({ username: `bob_${Date.now()}`.slice(0, 30) });
     charlie = await registerTestUser({ username: `charlie_${Date.now()}`.slice(0, 30) });
+    await enableFriendsForUser(alice.user.id);
+    await enableFriendsForUser(bob.user.id);
+    await enableFriendsForUser(charlie.user.id);
   });
 
   test('requires authentication', async () => {

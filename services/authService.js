@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const argon2 = require('argon2');
-const { Pool } = require('pg');
+const { pool } = require('./db');
 const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
@@ -117,12 +117,6 @@ async function sendPasswordResetEmail(toEmail, rawToken) {
 
   console.warn('[sendPasswordResetEmail] No email provider configured or all providers failed.');
 }
-
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 // ─── User functions ───────────────────────────────────────────────────────────
 
@@ -289,7 +283,7 @@ async function createPasswordResetToken(email) {
   }
 
   const rawToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = await argon2.hash(rawToken);
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
   await pool.query(
@@ -313,6 +307,7 @@ async function updateSessionLastUsedAt(sessionId, userId) {
 
 /**
  * Resets user password if token is valid, unexpired, and unused.
+ * Uses exact O(1) indexed SHA-256 token lookup.
  * Updates user's password_hash, marks token as used, and revokes all active sessions.
  *
  * @param {string} rawToken
@@ -320,20 +315,20 @@ async function updateSessionLastUsedAt(sessionId, userId) {
  * @returns {Promise<boolean>} True if successful, false otherwise.
  */
 async function resetPassword(rawToken, newPassword) {
-  const { rows } = await pool.query(
-    `SELECT id, user_id, token_hash, expires_at, used_at
-     FROM password_reset_tokens
-     WHERE used_at IS NULL AND expires_at > NOW()`
-  );
-
-  let matchedToken = null;
-  for (const row of rows) {
-    if (await argon2.verify(row.token_hash, rawToken)) {
-      matchedToken = row;
-      break;
-    }
+  if (!rawToken || typeof rawToken !== 'string') {
+    return false;
   }
 
+  const tokenHash = crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
+
+  const { rows } = await pool.query(
+    `SELECT id, user_id, expires_at, used_at
+     FROM password_reset_tokens
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()`,
+    [tokenHash]
+  );
+
+  const matchedToken = rows[0];
   if (!matchedToken) {
     return false;
   }
@@ -399,19 +394,34 @@ async function deleteUserAccount(userId, password) {
   const anonymizedEmail = `${user.email}_deleted_${Date.now()}`;
   const anonymizedUsername = `${user.username || 'user'}_deleted_${Date.now()}`.substring(0, 30);
 
-  await pool.query(
-    `UPDATE users
-     SET deleted_at = NOW(),
-         email = $1,
-         username = $2,
-         updated_at = NOW()
-     WHERE id = $3`,
-    [anonymizedEmail, anonymizedUsername, userId]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  await revokeAllSessionsForUser(userId);
+    await client.query(
+      `UPDATE users
+       SET deleted_at = NOW(),
+           email = $1,
+           username = $2,
+           updated_at = NOW()
+       WHERE id = $3`,
+      [anonymizedEmail, anonymizedUsername, userId]
+    );
 
-  return true;
+    await client.query(
+      `UPDATE sessions SET revoked_at = NOW()
+       WHERE user_id = $1 AND revoked_at IS NULL`,
+      [userId]
+    );
+
+    await client.query('COMMIT');
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 module.exports = {
