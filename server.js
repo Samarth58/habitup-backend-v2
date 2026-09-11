@@ -61,5 +61,10 @@ app.use('/admin', require('./routes/admin'));
 app.use('/notifications', require('./routes/notifications'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
+const { startScheduler } = require('./services/notificationSchedulerService');
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    startScheduler();
+});

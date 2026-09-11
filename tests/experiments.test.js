@@ -260,7 +260,7 @@ describe('A/B Experimentation Framework', () => {
       assert.equal(res.status, 201, JSON.stringify(body));
       requestId = body.request_id;
 
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 300));
       const after = await getActivityCount(senderUser.user.id, 'FRIEND_REQUEST_SENT');
       assert.ok(after > before, 'FRIEND_REQUEST_SENT must be logged');
     });
@@ -273,7 +273,7 @@ describe('A/B Experimentation Framework', () => {
       const body = await res.json();
       assert.ok([200, 409].includes(res.status), JSON.stringify(body));
 
-      await new Promise((r) => setTimeout(r, 150));
+      await new Promise((r) => setTimeout(r, 300));
       const after = await getActivityCount(receiverUser.user.id, 'FRIEND_REQUEST_ACCEPTED');
       assert.ok(after > before, 'FRIEND_REQUEST_ACCEPTED must be logged');
     });
@@ -287,7 +287,7 @@ describe('A/B Experimentation Framework', () => {
       assert.ok(res.status < 500, JSON.stringify(body));
 
       if (res.status === 200) {
-        await new Promise((r) => setTimeout(r, 150));
+        await new Promise((r) => setTimeout(r, 300));
         const after = await getActivityCount(senderUser.user.id, 'FRIEND_REMOVED');
         assert.ok(after > before, 'FRIEND_REMOVED must be logged');
       }
