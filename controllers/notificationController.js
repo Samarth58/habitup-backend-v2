@@ -1,10 +1,17 @@
 const { upsertDeviceToken, findDeviceTokenByUser } = require('../services/deviceTokenService');
 const { sendPushNotification, isFirebaseConfigured } = require('../services/notificationService');
+const {
+  getNotificationPreferences,
+  updateNotificationPreferences,
+} = require('../services/notificationPreferenceService');
 
 const ALLOWED_PLATFORMS = ['android', 'ios'];
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
 /**
- * Validates whether a given string is a valid IANA timezone name.
+ * Validates whether a given string is a valid IANA timezone identifier.
+ * Accepts IANA area/location names (e.g. 'Asia/Kolkata', 'America/New_York') and 'UTC' / 'GMT'.
+ * Rejects abbreviations (e.g. 'IST', 'EST') and fixed offsets (e.g. '+05:30', 'UTC+05:30').
  *
  * @param {string} tz
  * @returns {boolean}
@@ -13,8 +20,20 @@ function isValidIanaTimezone(tz) {
   if (typeof tz !== 'string' || !tz.trim()) {
     return false;
   }
+  const trimmed = tz.trim();
+
+  // Reject fixed offsets (e.g. +05:30, -04:00, +0530, UTC+05:30, GMT+5:30)
+  if (/^[+-]\d/.test(trimmed) || /^(?:UTC|GMT)[+-]/i.test(trimmed)) {
+    return false;
+  }
+
+  // Valid IANA names must be UTC, GMT, or contain a slash (e.g. Continent/City)
+  if (trimmed.toUpperCase() !== 'UTC' && trimmed.toUpperCase() !== 'GMT' && !trimmed.includes('/')) {
+    return false;
+  }
+
   try {
-    Intl.DateTimeFormat(undefined, { timeZone: tz.trim() });
+    Intl.DateTimeFormat(undefined, { timeZone: trimmed });
     return true;
   } catch {
     return false;
@@ -152,8 +171,120 @@ async function sendTestNotification(req, res) {
   }
 }
 
+/**
+ * GET /notifications/preferences
+ *
+ * Retrieves the authenticated user's notification preferences.
+ * If the user does not have a preferences row yet, creates/returns sensible defaults.
+ */
+async function getPreferences(req, res) {
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const preferences = await getNotificationPreferences(userId);
+    return res.status(200).json({
+      preferences,
+      ...preferences,
+    });
+  } catch (err) {
+    console.error('[getPreferences] Failed to fetch notification preferences:', err);
+    return res.status(500).json({ error: 'Failed to fetch notification preferences.' });
+  }
+}
+
+/**
+ * PUT /notifications/preferences
+ *
+ * Updates notification preferences for the authenticated user.
+ * Supports full or partial updates, strictly validates booleans, 24-hour times, and IANA timezone.
+ */
+async function updatePreferences(req, res) {
+  const userId = req.userId;
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  const body = req.body || {};
+  const updates = {};
+
+  // Extract boolean fields (supporting both camelCase and snake_case)
+  const booleanFields = [
+    { camel: 'pushEnabled', snake: 'push_enabled' },
+    { camel: 'morningEnabled', snake: 'morning_enabled' },
+    { camel: 'afternoonEnabled', snake: 'afternoon_enabled' },
+    { camel: 'eveningEnabled', snake: 'evening_enabled' },
+  ];
+
+  for (const { camel, snake } of booleanFields) {
+    const val = body[camel] !== undefined ? body[camel] : body[snake];
+    if (val !== undefined) {
+      if (typeof val !== 'boolean') {
+        return res.status(400).json({ error: `${camel} must be a boolean.` });
+      }
+      updates[snake] = val;
+    }
+  }
+
+  // Extract time fields (supporting both camelCase and snake_case)
+  const timeFields = [
+    { camel: 'morningTime', snake: 'morning_time' },
+    { camel: 'afternoonTime', snake: 'afternoon_time' },
+    { camel: 'eveningTime', snake: 'evening_time' },
+  ];
+
+  for (const { camel, snake } of timeFields) {
+    const val = body[camel] !== undefined ? body[camel] : body[snake];
+    if (val !== undefined) {
+      if (typeof val !== 'string' || !TIME_REGEX.test(val.trim())) {
+        return res.status(400).json({
+          error: `${camel} must be a valid 24-hour time in HH:mm format (e.g. '08:00', '13:00', '20:00').`,
+        });
+      }
+      updates[snake] = val.trim();
+    }
+  }
+
+  // Extract timezone field
+  if (body.timezone !== undefined) {
+    if (typeof body.timezone !== 'string' || !body.timezone.trim()) {
+      return res.status(400).json({
+        error: 'timezone must be a non-empty string representing a valid IANA timezone identifier.',
+      });
+    }
+    const trimmedTimezone = body.timezone.trim();
+    if (!isValidIanaTimezone(trimmedTimezone)) {
+      return res.status(400).json({
+        error: 'Invalid IANA timezone identifier. Examples: Asia/Kolkata, America/New_York, Europe/London, UTC.',
+      });
+    }
+    updates.timezone = trimmedTimezone;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({
+      error: 'At least one preference field must be provided to update.',
+    });
+  }
+
+  try {
+    const preferences = await updateNotificationPreferences(userId, updates);
+    return res.status(200).json({
+      preferences,
+      ...preferences,
+    });
+  } catch (err) {
+    console.error('[updatePreferences] Failed to update notification preferences:', err);
+    return res.status(500).json({ error: 'Failed to update notification preferences.' });
+  }
+}
+
 module.exports = {
   registerDeviceToken,
   sendTestNotification,
+  getPreferences,
+  updatePreferences,
   isValidIanaTimezone,
 };

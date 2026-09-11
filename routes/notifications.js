@@ -1,11 +1,119 @@
 const { Router } = require('express');
-const { registerDeviceToken, sendTestNotification } = require('../controllers/notificationController');
+const {
+  registerDeviceToken,
+  sendTestNotification,
+  getPreferences,
+  updatePreferences,
+} = require('../controllers/notificationController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
 const router = Router();
 
 // Protect all notification routes with auth middleware
 router.use(requireAuth);
+
+/**
+ * @swagger
+ * /notifications/preferences:
+ *   get:
+ *     tags: [Notifications]
+ *     summary: Get user notification preferences
+ *     description: Returns the notification preferences for the authenticated user. If the user does not have preferences set, default preferences are created and returned.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Notification preferences retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 preferences:
+ *                   $ref: '#/components/schemas/NotificationPreferences'
+ *       401:
+ *         description: Unauthorized or missing/invalid access token
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *   put:
+ *     tags: [Notifications]
+ *     summary: Update user notification preferences
+ *     description: Updates full or partial notification preferences for the authenticated user.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               pushEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable all push notifications
+ *                 example: true
+ *               morningEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable morning reminder notifications
+ *                 example: true
+ *               afternoonEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable afternoon reminder notifications
+ *                 example: false
+ *               eveningEnabled:
+ *                 type: boolean
+ *                 description: Enable or disable evening reminder notifications
+ *                 example: true
+ *               morningTime:
+ *                 type: string
+ *                 description: Preferred morning reminder time in 24-hour HH:mm format
+ *                 example: '08:00'
+ *               afternoonTime:
+ *                 type: string
+ *                 description: Preferred afternoon reminder time in 24-hour HH:mm format
+ *                 example: '13:00'
+ *               eveningTime:
+ *                 type: string
+ *                 description: Preferred evening reminder time in 24-hour HH:mm format
+ *                 example: '20:00'
+ *               timezone:
+ *                 type: string
+ *                 description: Valid IANA timezone identifier (e.g. Asia/Kolkata, America/New_York, Europe/London, UTC)
+ *                 example: 'Asia/Kolkata'
+ *     responses:
+ *       200:
+ *         description: Notification preferences updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 preferences:
+ *                   $ref: '#/components/schemas/NotificationPreferences'
+ *       400:
+ *         description: Invalid field types or invalid time format
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       401:
+ *         description: Unauthorized or missing/invalid access token
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.get('/preferences', getPreferences);
+router.put('/preferences', updatePreferences);
 
 /**
  * @swagger
@@ -136,3 +244,4 @@ router.post('/device-token', registerDeviceToken);
 router.post('/test', sendTestNotification);
 
 module.exports = router;
+
