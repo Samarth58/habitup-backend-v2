@@ -1,5 +1,3 @@
-import { buildQuery } from '../utils';
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const getStoredTokens = () => {
@@ -83,10 +81,11 @@ export async function apiRequest(endpoint, options = {}) {
 // API Methods
 export const api = {
   async login(email, password) {
-    return apiRequest('/auth/login', {
+    const data = await apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    return data;
   },
 
   async heartbeat(refreshToken) {
@@ -101,7 +100,16 @@ export const api = {
   },
 
   async getUsersList(params = {}) {
-    return apiRequest(`/admin/users?${buildQuery(params)}`);
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+    if (params.email) query.append('email', params.email);
+    if (params.role) query.append('role', params.role);
+    if (params.status) query.append('status', params.status);
+    if (params.sort) query.append('sort', params.sort);
+    if (params.order) query.append('order', params.order);
+
+    return apiRequest(`/admin/users?${query.toString()}`);
   },
 
   async getUserDetail(userId) {
@@ -109,15 +117,33 @@ export const api = {
   },
 
   async getActivityFeed(params = {}) {
-    return apiRequest(`/admin/activity?${buildQuery(params)}`);
+    const query = new URLSearchParams();
+    if (params.userId) query.append('userId', params.userId);
+    if (params.activityType) query.append('activityType', params.activityType);
+    if (params.from) query.append('from', params.from);
+    if (params.to) query.append('to', params.to);
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+
+    return apiRequest(`/admin/activity?${query.toString()}`);
   },
 
   async getUsageAnalytics(params = {}) {
-    return apiRequest(`/admin/analytics/usage?${buildQuery(params)}`);
+    const query = new URLSearchParams();
+    if (params.period) query.append('period', params.period);
+    if (params.from) query.append('from', params.from);
+    if (params.to) query.append('to', params.to);
+
+    return apiRequest(`/admin/analytics/usage?${query.toString()}`);
   },
 
   async getActivityAnalytics(params = {}) {
-    return apiRequest(`/admin/analytics/activity?${buildQuery(params)}`);
+    const query = new URLSearchParams();
+    if (params.period) query.append('period', params.period);
+    if (params.from) query.append('from', params.from);
+    if (params.to) query.append('to', params.to);
+
+    return apiRequest(`/admin/analytics/activity?${query.toString()}`);
   },
 
   async listExperiments() {

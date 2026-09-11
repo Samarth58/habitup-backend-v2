@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { formatDuration } from '../utils';
 
 export function UserDetailModal({ userId, onClose }) {
   const [userData, setUserData] = useState(null);
@@ -37,6 +36,13 @@ export function UserDetailModal({ userId, onClose }) {
 
   if (!userId) return null;
 
+  const formatDuration = (seconds) => {
+    if (!seconds && seconds !== 0) return '—';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    return `${mins}m`;
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

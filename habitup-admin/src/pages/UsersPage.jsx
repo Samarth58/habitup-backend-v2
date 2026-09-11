@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { UserDetailModal } from '../components/UserDetailModal';
-import { formatDuration } from '../utils';
 
 export function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -57,6 +56,12 @@ export function UsersPage() {
     fetchUsers();
   };
 
+  const formatDuration = (seconds) => {
+    if (!seconds && seconds !== 0) return '0m';
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+  };
 
   return (
     <div className="content-container">

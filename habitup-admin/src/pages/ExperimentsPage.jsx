@@ -77,17 +77,6 @@ function CompareRow({ label, controlVal, treatmentVal, highlight = false }) {
   );
 }
 
-function StatTile({ label, value }) {
-  return (
-    <div style={{ padding: '0.85rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '10px' }}>
-      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '6px' }}>
-        {label.toUpperCase()}
-      </div>
-      <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>{value}</div>
-    </div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ExperimentsPage() {
@@ -265,7 +254,12 @@ export function ExperimentsPage() {
               { label: '95% Confidence Interval', value: fmtCI(comparison.confidenceInterval) },
               { label: 'Statistically Significant', value: <span className={`badge-tag ${significantClass}`}>{comparison.significant ? 'YES' : 'NO'}</span> },
             ].map(({ label, value }) => (
-              <StatTile key={label} label={label} value={value} />
+              <div key={label} style={{ padding: '0.85rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                  {label.toUpperCase()}
+                </div>
+                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>{value}</div>
+              </div>
             ))}
           </div>
         )}
@@ -390,7 +384,12 @@ export function ExperimentsPage() {
               { label: 'Users with Friends Rate', value: pct(friends?.usersWithFriendsRate) },
               { label: 'Avg Friends per User', value: friends?.avgFriendsPerUser?.toFixed(2) ?? '—' },
             ].map(({ label, value }) => (
-              <StatTile key={label} label={label} value={value} />
+              <div key={label} style={{ padding: '0.85rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '10px' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                  {label.toUpperCase()}
+                </div>
+                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>{value}</div>
+              </div>
             ))}
           </div>
         )}
