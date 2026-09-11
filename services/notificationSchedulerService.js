@@ -2,6 +2,7 @@ const { pool } = require('./db');
 const { getDeviceTokensByUserId, deleteDeviceToken } = require('./deviceTokenService');
 const { sendPushNotification } = require('./notificationService');
 const { getPersonalizedContent } = require('./personalizedNotificationService');
+const { processAutomatedBroadcasts } = require('./broadcastScheduleService');
 
 /**
  * Standard notification templates for morning, afternoon, and evening.
@@ -239,6 +240,11 @@ async function processScheduledNotifications(currentTime = new Date()) {
         await processSingleNotification(pref.user_id, type, localDate, localTime, tz, summary);
       }
     }
+
+    // Process automated all-user broadcast slots (10:30, 15:30, 19:30 Asia/Kolkata)
+    await processAutomatedBroadcasts(currentTime).catch((err) => {
+      console.error('[notificationScheduler] Automated broadcast error:', err.message);
+    });
   } catch (err) {
     console.error('[notificationScheduler] Scheduler cycle failure:', err.message);
   }

@@ -36,6 +36,22 @@ describe('Admin Dashboard API Suite', () => {
       const res = await authFetch('/admin/dashboard', {}, adminUser.accessToken);
       assert.equal(res.status, 200);
     });
+
+    test('admin broadcast requires authentication', async () => {
+      const res = await authFetch('/admin/notifications/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Title', body: 'Body' }),
+      });
+      assert.equal(res.status, 401);
+    });
+
+    test('admin broadcast rejects non-admin users', async () => {
+      const res = await authFetch('/admin/notifications/broadcast', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Title', body: 'Body' }),
+      }, regularUser.accessToken);
+      assert.equal(res.status, 403);
+    });
   });
 
   describe('Dashboard Analytics (GET /admin/dashboard)', () => {

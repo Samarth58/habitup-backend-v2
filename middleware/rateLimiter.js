@@ -46,10 +46,19 @@ const searchLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const broadcastLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many broadcast notifications. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   authLimiter,
   passwordResetLimiter,
   heartbeatLimiter,
   searchLimiter,
+  broadcastLimiter,
 };
 

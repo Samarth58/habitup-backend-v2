@@ -9,14 +9,46 @@ const {
   listAllExperiments,
   getExperimentReport,
 } = require('../controllers/adminController');
+const { sendBroadcast } = require('../controllers/broadcastController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/adminMiddleware');
 const { validateUuid } = require('../middleware/validateUuid');
+const { broadcastLimiter } = require('../middleware/rateLimiter');
 
 const router = Router();
 
 // Protect all admin endpoints with both authentication and database-checked admin authorization
 router.use(requireAuth, requireAdmin);
+
+/**
+ * @swagger
+ * /admin/notifications/broadcast:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Send an engagement notification to all subscribed devices
+ *     description: Sends a non-personalized FCM notification to the all-users topic. Mobile devices must subscribe to that topic.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, body]
+ *             properties:
+ *               title: { type: string, maxLength: 120, example: 'Keep Going! 🔥' }
+ *               body: { type: string, maxLength: 1000, example: 'Small progress is still progress. Complete one habit today!' }
+ *               category: { type: string, enum: [motivation, encouragement, habit_tip, streak, goal, progress, comeback, challenge, announcement] }
+ *     responses:
+ *       200: { description: Broadcast sent successfully }
+ *       400: { description: Invalid broadcast request }
+ *       401: { description: Unauthorized }
+ *       403: { description: Admin access required }
+ *       502: { description: FCM broadcast failed }
+ *       503: { description: Firebase Admin SDK is not configured }
+ */
+router.post('/notifications/broadcast', broadcastLimiter, sendBroadcast);
 
 /**
  * @swagger

@@ -1,4 +1,4 @@
-const { getFirebaseMessaging, isFirebaseConfigured } = require('./firebaseService');
+const firebaseService = require('./firebaseService');
 
 /**
  * Sends a push notification to a single FCM device token using Firebase Cloud Messaging.
@@ -23,7 +23,7 @@ async function sendPushNotification(token, { title, body, data }) {
     throw new Error('Notification body is required.');
   }
 
-  const messaging = getFirebaseMessaging();
+  const messaging = firebaseService.getFirebaseMessaging();
 
   const messagePayload = {
     token: token.trim(),
@@ -72,7 +72,69 @@ async function sendPushNotification(token, { title, body, data }) {
   }
 }
 
+/**
+ * Sends a push notification to an FCM topic.
+ * This is intentionally separate from token delivery used by personalized notifications.
+ */
+async function sendTopicPushNotification(topic, { title, body, data }) {
+  if (!topic || typeof topic !== 'string' || !topic.trim()) {
+    throw new Error('Notification topic is required.');
+  }
+
+  if (!title || typeof title !== 'string' || !title.trim()) {
+    throw new Error('Notification title is required.');
+  }
+
+  if (!body || typeof body !== 'string' || !body.trim()) {
+    throw new Error('Notification body is required.');
+  }
+
+  const messaging = firebaseService.getFirebaseMessaging();
+  const messagePayload = {
+    topic: topic.trim(),
+    notification: {
+      title: title.trim(),
+      body: body.trim(),
+    },
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: (data && data.channelId) || 'high_importance_channel',
+        sound: 'default',
+        priority: 'max',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        visibility: 'public',
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1,
+          contentAvailable: true,
+        },
+      },
+    },
+  };
+
+  if (data && typeof data === 'object') {
+    messagePayload.data = Object.fromEntries(
+      Object.entries(data).map(([key, val]) => [key, String(val)])
+    );
+  }
+
+  try {
+    const messageId = await messaging.send(messagePayload);
+    return { success: true, messageId };
+  } catch (err) {
+    console.error('[sendTopicPushNotification] Firebase messaging error:', err.code || err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   sendPushNotification,
-  isFirebaseConfigured,
+  sendTopicPushNotification,
+  isFirebaseConfigured: () => firebaseService.isFirebaseConfigured(),
 };
