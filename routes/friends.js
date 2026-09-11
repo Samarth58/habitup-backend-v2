@@ -11,6 +11,7 @@ const {
   removeFriend,
   getFriendHabits,
   getFriendStats,
+  sendNudge,
 } = require('../controllers/friendController');
 
 const router = Router();
@@ -98,6 +99,33 @@ router.delete('/requests/:requestId', validateUuid('requestId'), rejectFriendReq
  *       200: { description: Accepted friends }
  */
 router.get('/', getFriends);
+
+/**
+ * @swagger
+ * /friends/{friendId}/nudge:
+ *   post:
+ *     tags: [Friends]
+ *     summary: Send a habit nudge to an accepted friend
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - { in: path, name: friendId, required: true, schema: { type: string, format: uuid } }
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               habitName: { type: string, maxLength: 100, example: Workout }
+ *     responses:
+ *       200: { description: Nudge processed }
+ *       400: { description: Invalid input or FCM token }
+ *       401: { description: Unauthorized }
+ *       403: { description: Friends feature disabled for the experiment group }
+ *       404: { description: Friendship not found }
+ *       503: { description: Firebase Admin SDK is not configured }
+ */
+router.post('/:friendId/nudge', validateUuid('friendId'), sendNudge);
 
 /**
  * @swagger

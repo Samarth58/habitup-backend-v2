@@ -179,6 +179,45 @@ describe('Friends API', () => {
     assert.equal(typeof statsBody.overall_completion_rate, 'number');
   });
 
+  test('rejects malformed nudge friend UUIDs before querying', async () => {
+    const response = await authFetch(`/friends/${INVALID_UUID}/nudge`, {
+      method: 'POST',
+      body: JSON.stringify({ habitName: 'Workout' }),
+    }, alice.accessToken);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /invalid id format/i);
+  });
+
+  test('rejects self nudges', async () => {
+    const response = await authFetch(`/friends/${alice.user.id}/nudge`, {
+      method: 'POST',
+      body: JSON.stringify({ habitName: 'Workout' }),
+    }, alice.accessToken);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /cannot nudge yourself/i);
+  });
+
+  test('rejects nudges to non-friends', async () => {
+    const response = await authFetch(`/friends/${charlie.user.id}/nudge`, {
+      method: 'POST',
+      body: JSON.stringify({ habitName: 'Workout' }),
+    }, alice.accessToken);
+    assert.equal(response.status, 404);
+    assert.match((await response.json()).error, /not friends/i);
+  });
+
+  test('returns a controlled response when an accepted friend has no device token', async () => {
+    const response = await authFetch(`/friends/${bob.user.id}/nudge`, {
+      method: 'POST',
+      body: JSON.stringify({ habitName: 'Workout' }),
+    }, alice.accessToken);
+    const body = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(body));
+    assert.equal(body.success, true);
+    assert.equal(body.sent, false);
+    assert.equal(body.attempted, 0);
+  });
+
   test('rejects accepting the same request twice', async () => {
     const response = await authFetch(`/friends/requests/${requestId}/accept`, {
       method: 'POST',

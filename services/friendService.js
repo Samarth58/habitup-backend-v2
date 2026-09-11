@@ -9,6 +9,8 @@ const {
 const { calculateBestStreak, getUserOverallStats } = require('./statsService');
 const { calculateStreak } = require('./streakService');
 const { logActivity } = require('./activityService');
+const { getDeviceTokensByUserId } = require('./deviceTokenService');
+const { sendPushNotification, isFirebaseConfigured } = require('./notificationService');
 
 function serviceError(message, status) {
   const error = new Error(message);
@@ -201,6 +203,67 @@ async function assertFriends(userId, friendId) {
   }
 }
 
+async function sendNudge(senderId, friendId, habitName = '') {
+  if (senderId === friendId) {
+    throw serviceError('Cannot nudge yourself', 400);
+  }
+
+  await assertFriends(senderId, friendId);
+
+  const { rows } = await pool.query(
+    `SELECT name, username FROM users WHERE id = $1 AND deleted_at IS NULL`,
+    [senderId]
+  );
+  const sender = rows[0];
+  if (!sender) throw serviceError('User not found', 404);
+
+  const tokens = await getDeviceTokensByUserId(friendId);
+  if (tokens.length === 0) {
+    return {
+      success: true,
+      sent: false,
+      message: 'Nudge accepted, but the recipient has no registered device.',
+      attempted: 0,
+      delivered: 0,
+      failed: 0,
+    };
+  }
+
+  if (!isFirebaseConfigured()) {
+    throw serviceError('Firebase Admin SDK is not configured.', 503);
+  }
+
+  const cleanHabitName = habitName || '';
+  const body = cleanHabitName
+    ? `${sender.name || sender.username} nudged you to complete your ${cleanHabitName}`
+    : `${sender.name || sender.username} sent you a habit nudge`;
+  const results = await Promise.allSettled(tokens.map(({ token }) => sendPushNotification(token, {
+    title: 'Habit Nudge 👋',
+    body,
+    data: {
+      type: 'friend_nudge',
+      senderId,
+      recipientId: friendId,
+      habitName: cleanHabitName,
+    },
+  })));
+  const delivered = results.filter((result) => result.status === 'fulfilled').length;
+  const failed = results.length - delivered;
+
+  if (delivered === 0) {
+    throw results.find((result) => result.status === 'rejected').reason;
+  }
+
+  return {
+    success: true,
+    sent: true,
+    message: 'Nudge sent successfully',
+    attempted: results.length,
+    delivered,
+    failed,
+  };
+}
+
 async function getFriendHabits(userId, friendId) {
   await assertFriends(userId, friendId);
   const timezone = await getUserTimezone(friendId);
@@ -230,6 +293,8 @@ module.exports = {
   getFriends,
   isFriendsWith,
   removeFriend,
+  assertFriends,
+  sendNudge,
   getFriendHabits,
   getFriendStats,
 };

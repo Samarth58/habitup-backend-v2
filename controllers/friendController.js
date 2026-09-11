@@ -82,6 +82,28 @@ async function getFriendStats(req, res) {
   }
 }
 
+async function sendNudge(req, res) {
+  const habitName = req.body?.habitName;
+  if (habitName !== undefined && (typeof habitName !== 'string' || habitName.trim().length > 100)) {
+    return res.status(400).json({ error: 'habitName must be a string of 100 characters or fewer.' });
+  }
+
+  try {
+    return res.json(await friendService.sendNudge(
+      getUserId(req),
+      req.params.friendId,
+      habitName?.trim() || ''
+    ));
+  } catch (error) {
+    if (error.code === 'messaging/invalid-registration-token' ||
+        error.code === 'messaging/registration-token-not-registered' ||
+        error.code === 'messaging/invalid-argument') {
+      return res.status(400).json({ error: 'Invalid or unregistered FCM device token.' });
+    }
+    return handleError(res, error, 'Failed to send friend nudge');
+  }
+}
+
 module.exports = {
   sendFriendRequest,
   getPendingRequests,
@@ -91,4 +113,5 @@ module.exports = {
   removeFriend,
   getFriendHabits,
   getFriendStats,
+  sendNudge,
 };
