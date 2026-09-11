@@ -1,5 +1,5 @@
 const { pool } = require('./db');
-const { getDeviceTokensByUserId } = require('./deviceTokenService');
+const { getDeviceTokensByUserId, deleteDeviceToken } = require('./deviceTokenService');
 const { sendPushNotification } = require('./notificationService');
 const { getPersonalizedContent } = require('./personalizedNotificationService');
 
@@ -151,6 +151,21 @@ async function processSingleNotification(userId, notificationType, localDate, lo
     } catch (sendErr) {
       lastError = sendErr.message || String(sendErr);
       console.error(`[notificationScheduler] Push dispatch failed for token on user ${userId}:`, lastError);
+
+      // Auto-prune invalid or unregistered tokens so we don't repeatedly fail on stale test tokens
+      if (
+        sendErr.code === 'messaging/invalid-registration-token' ||
+        sendErr.code === 'messaging/registration-token-not-registered' ||
+        sendErr.code === 'messaging/invalid-argument' ||
+        (sendErr.message && sendErr.message.includes('not a valid FCM registration token'))
+      ) {
+        try {
+          await deleteDeviceToken(dt.token);
+          console.log(`[notificationScheduler] Pruned invalid device token for user ${userId}`);
+        } catch (pruneErr) {
+          console.error(`[notificationScheduler] Failed to prune invalid token:`, pruneErr.message);
+        }
+      }
     }
   }
 

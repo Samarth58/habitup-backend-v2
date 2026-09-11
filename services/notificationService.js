@@ -31,6 +31,26 @@ async function sendPushNotification(token, { title, body, data }) {
       title: title.trim(),
       body: body.trim(),
     },
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: (data && data.channelId) || 'high_importance_channel',
+        sound: 'default',
+        priority: 'max',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        visibility: 'public',
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1,
+          contentAvailable: true,
+        },
+      },
+    },
   };
 
   if (data && typeof data === 'object') {
