@@ -1,5 +1,5 @@
 exports.up = (pgm) => {
-    pgm.createTable('habits', {
+    pgm.createTable('sessions', {
         id: { type: 'uuid', primaryKey: true, default: pgm.func('gen_random_uuid()') },
         user_id: {
             type: 'uuid',
@@ -7,19 +7,15 @@ exports.up = (pgm) => {
             references: 'users',
             onDelete: 'CASCADE',
         },
-        name: { type: 'text', notNull: true },
-        description: { type: 'text' },
-        icon: { type: 'text' },
-        color: { type: 'text' },
-        frequency_type: { type: 'text', notNull: true },
+        refresh_token_hash: { type: 'text', notNull: true },
+        device_id: { type: 'text' },
+        device_name: { type: 'text' },
+        expires_at: { type: 'timestamptz', notNull: true },
         created_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
-        updated_at: { type: 'timestamptz', notNull: true, default: pgm.func('now()') },
-        paused_at: { type: 'timestamptz' },
-        archived_at: { type: 'timestamptz' },
-        deleted_at: { type: 'timestamptz' },
-    });
+        revoked_at: { type: 'timestamptz' },
+    }, { ifNotExists: true });
 };
 
 exports.down = (pgm) => {
-    pgm.dropTable('habits');
+    pgm.dropTable('sessions', { ifExists: true });
 };

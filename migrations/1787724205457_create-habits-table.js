@@ -17,9 +17,9 @@ exports.up = (pgm) => {
         paused_at: { type: 'timestamptz' },
         archived_at: { type: 'timestamptz' },
         deleted_at: { type: 'timestamptz' },
-    });
+    }, { ifNotExists: true });
 };
 
 exports.down = (pgm) => {
-    pgm.dropTable('habits');
+    pgm.dropTable('habits', { ifExists: true });
 };
