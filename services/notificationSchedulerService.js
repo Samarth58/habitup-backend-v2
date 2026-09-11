@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const { getDeviceTokensByUserId } = require('./deviceTokenService');
 const { sendPushNotification } = require('./notificationService');
+const { getPersonalizedContent } = require('./personalizedNotificationService');
 
 /**
  * Standard notification templates for morning, afternoon, and evening.
@@ -135,20 +136,17 @@ async function processSingleNotification(userId, notificationType, localDate, lo
     return;
   }
 
-  const template = NOTIFICATION_TEMPLATES[notificationType] || {
-    title: 'HabitUp Reminder',
-    body: 'Check in on your habits today.',
-  };
+  // Compute personalized notification content based on user's actual habit progress.
+  // Falls back to a generic message automatically on any error, so one user's failure
+  // cannot stop the scheduler.
+  const { title, body, data } = await getPersonalizedContent(userId, notificationType, localDate, timezone);
 
   let anySent = false;
   let lastError = null;
 
   for (const dt of deviceTokens) {
     try {
-      await sendPushNotification(dt.token, {
-        title: template.title,
-        body: template.body,
-      });
+      await sendPushNotification(dt.token, { title, body, data });
       anySent = true;
     } catch (sendErr) {
       lastError = sendErr.message || String(sendErr);
