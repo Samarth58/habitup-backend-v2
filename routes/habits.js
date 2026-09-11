@@ -12,6 +12,7 @@ const {
   unarchiveHabit,
   addHabitCompletion,
   removeHabitCompletion,
+  getHabitCompletions,
   getHabitStatsHandler,
   getUserStatsHandler,
 } = require('../controllers/habitController');
@@ -514,6 +515,52 @@ router.patch('/:id/unarchive', validateUuid('id'), unarchiveHabit);
  *             schema: { $ref: '#/components/schemas/Error' }
  */
 router.post('/:id/completions', validateUuid('id'), addHabitCompletion);
+
+/**
+ * @swagger
+ * /habits/{id}/completions:
+ *   get:
+ *     tags: [Habits]
+ *     summary: Retrieve completion history for a specific habit
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *         description: Habit ID
+ *     responses:
+ *       200:
+ *         description: Array of completion records for the habit
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 completions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:              { type: string, format: uuid }
+ *                       habit_id:        { type: string, format: uuid }
+ *                       user_id:         { type: string, format: uuid }
+ *                       completion_date: { type: string, format: date, example: '2026-08-29' }
+ *                       completed_at:    { type: string, format: date-time }
+ *                       created_at:      { type: string, format: date-time }
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ *       404:
+ *         description: Habit not found
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/Error' }
+ */
+router.get('/:id/completions', validateUuid('id'), getHabitCompletions);
 
 /**
  * @swagger

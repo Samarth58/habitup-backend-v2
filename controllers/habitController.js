@@ -14,6 +14,7 @@ const {
   addCompletion,
   removeCompletion,
   getCompletionDates,
+  getCompletionsForHabit,
   getUserTimezone,
 } = require('../services/habitService');
 const { calculateStreak } = require('../services/streakService');
@@ -357,6 +358,28 @@ async function removeHabitCompletion(req, res) {
 }
 
 /**
+ * GET /habits/:id/completions
+ * Retrieves all completion records for a specific habit belonging to the authenticated user.
+ */
+async function getHabitCompletions(req, res) {
+  const userId = req.userId;
+  const habitId = req.params.id;
+
+  try {
+    const habit = await getHabitById(userId, habitId);
+    if (!habit) {
+      return res.status(404).json({ error: 'Habit not found.' });
+    }
+
+    const completions = await getCompletionsForHabit(userId, habitId);
+    return res.json({ completions });
+  } catch (err) {
+    console.error('[getHabitCompletions]', err);
+    return res.status(500).json({ error: 'Failed to fetch habit completions.' });
+  }
+}
+
+/**
  * GET /habits/:id/stats
  * Query params: ?period=month|year (default: 'month')
  * Returns statistics for a specific habit (current_streak, best_streak, total_completions, completion_rate, period).
@@ -412,6 +435,7 @@ module.exports = {
   unarchiveHabit,
   addHabitCompletion,
   removeHabitCompletion,
+  getHabitCompletions,
   getHabitStatsHandler,
   getUserStatsHandler,
 };

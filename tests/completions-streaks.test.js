@@ -158,3 +158,97 @@ describe('Completions & Streaks API Endpoints', () => {
     assert.deepEqual(getBody.habit.schedule, [0, 1, 3, 5]);
   });
 });
+
+describe('GET /habits/:id/completions', () => {
+  let user;
+  let otherUser;
+
+  before(async () => {
+    user = await registerTestUser();
+    otherUser = await registerTestUser();
+  });
+
+  test('returns empty completions array for a habit with no check-ins', async () => {
+    const habitRes = await authFetch(
+      '/habits',
+      { method: 'POST', body: JSON.stringify({ name: 'Fresh Habit', frequency_type: 'daily' }) },
+      user.accessToken
+    );
+    const { habit } = await habitRes.json();
+
+    const res = await authFetch(`/habits/${habit.id}/completions`, { method: 'GET' }, user.accessToken);
+    const body = await res.json();
+
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(body.completions));
+    assert.equal(body.completions.length, 0);
+  });
+
+  test('returns completion records after marking habit complete', async () => {
+    const habitRes = await authFetch(
+      '/habits',
+      { method: 'POST', body: JSON.stringify({ name: 'Hydration Habit', frequency_type: 'daily' }) },
+      user.accessToken
+    );
+    const { habit } = await habitRes.json();
+
+    // Mark complete
+    await authFetch(`/habits/${habit.id}/completions`, { method: 'POST' }, user.accessToken);
+
+    const res = await authFetch(`/habits/${habit.id}/completions`, { method: 'GET' }, user.accessToken);
+    const body = await res.json();
+
+    assert.equal(res.status, 200);
+    assert.ok(Array.isArray(body.completions));
+    assert.equal(body.completions.length, 1);
+
+    const c = body.completions[0];
+    assert.equal(c.habit_id, habit.id);
+    assert.ok(c.completion_date, 'completion_date must be present');
+    assert.match(c.completion_date, /^\d{4}-\d{2}-\d{2}$/, 'completion_date must be YYYY-MM-DD');
+    assert.ok(c.id);
+    assert.ok(c.user_id);
+  });
+
+  test('returns 404 for a nonexistent habit', async () => {
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+    const res = await authFetch(`/habits/${fakeId}/completions`, { method: 'GET' }, user.accessToken);
+    assert.equal(res.status, 404);
+    const body = await res.json();
+    assert.ok(body.error);
+  });
+
+  test('returns 400 for an invalid (non-UUID) habit ID', async () => {
+    const res = await authFetch('/habits/not-a-uuid/completions', { method: 'GET' }, user.accessToken);
+    assert.equal(res.status, 400);
+  });
+
+  test('returns 401 for unauthenticated request', async () => {
+    const habitRes = await authFetch(
+      '/habits',
+      { method: 'POST', body: JSON.stringify({ name: 'Private Habit', frequency_type: 'daily' }) },
+      user.accessToken
+    );
+    const { habit } = await habitRes.json();
+
+    const res = await authFetch(`/habits/${habit.id}/completions`, { method: 'GET' });
+    assert.equal(res.status, 401);
+  });
+
+  test('does not expose another user\'s habit completions (returns 404)', async () => {
+    // user creates and completes a habit
+    const habitRes = await authFetch(
+      '/habits',
+      { method: 'POST', body: JSON.stringify({ name: 'User A Secret Habit', frequency_type: 'daily' }) },
+      user.accessToken
+    );
+    const { habit } = await habitRes.json();
+    await authFetch(`/habits/${habit.id}/completions`, { method: 'POST' }, user.accessToken);
+
+    // otherUser tries to fetch user's habit completions
+    const res = await authFetch(`/habits/${habit.id}/completions`, { method: 'GET' }, otherUser.accessToken);
+    assert.equal(res.status, 404);
+    const body = await res.json();
+    assert.ok(body.error);
+  });
+});

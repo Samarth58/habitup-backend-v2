@@ -223,6 +223,24 @@ async function getCompletionDates(userId, habitId) {
 }
 
 /**
+ * Returns all completion records for a habit belonging to a user, ordered newest first.
+ *
+ * @param {string} userId
+ * @param {string} habitId
+ * @returns {Promise<Array<object>>}
+ */
+async function getCompletionsForHabit(userId, habitId) {
+  const query = `
+    SELECT id, habit_id, user_id, to_char(completion_date, 'YYYY-MM-DD') AS completion_date, completed_at, created_at
+    FROM habit_completions
+    WHERE habit_id = $1 AND user_id = $2
+    ORDER BY completion_date DESC
+  `;
+  const { rows } = await pool.query(query, [habitId, userId]);
+  return rows;
+}
+
+/**
  * Helper to fetch user's timezone from DB if not present in request.
  *
  * @param {string} userId
@@ -336,6 +354,7 @@ module.exports = {
   addCompletion,
   removeCompletion,
   getCompletionDates,
+  getCompletionsForHabit,
   getUserTimezone,
 };
 
