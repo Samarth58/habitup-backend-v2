@@ -30,7 +30,17 @@ app.get('/', (req, res) => {
 app.get('/health', async (req, res) => {
     try {
         await pool.query('SELECT 1');
-        res.json({ status: 'ok', db: 'connected' });
+        const { isFirebaseConfigured } = require('./services/firebaseService');
+        res.json({
+            status: 'ok',
+            db: 'connected',
+            firebase: {
+                configured: isFirebaseConfigured(),
+                hasProjectId: Boolean(process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PROJECT_ID.trim()),
+                hasClientEmail: Boolean(process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_CLIENT_EMAIL.trim()),
+                hasPrivateKey: Boolean(process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_PRIVATE_KEY.trim()),
+            },
+        });
     } catch (err) {
         res.status(500).json({ status: 'error', message: err.message });
     }
