@@ -43,6 +43,7 @@ const BROADCAST_SLOTS = {
   '10:30': 'morning_blast',
   '15:30': 'afternoon_blast',
   '19:30': 'evening_blast',
+  '21:45': 'evening_test_blast',
 };
 
 /**
@@ -109,7 +110,7 @@ function computeDeterministicIndex(slotKey, dateStr, poolLength) {
  * @returns {{ title: string, body: string, category: string, index: number, slotKey: string }}
  */
 function getBroadcastForSlot(slotKey, dateOrStr) {
-  const pool = TEMPLATE_POOLS[slotKey];
+  const pool = TEMPLATE_POOLS[slotKey] || TEMPLATE_POOLS['evening_blast'];
   if (!pool || pool.length === 0) {
     throw new Error(`Invalid or empty template pool for slot: ${slotKey}`);
   }
