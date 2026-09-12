@@ -1,9 +1,13 @@
 const { pool } = require('./db');
+const { ensureNotificationPreferences } = require('./notificationPreferenceService');
+const firebaseService = require('./firebaseService');
 
 /**
  * Inserts or updates an FCM device token for a user.
  * If the token already exists in the database (even under another user),
  * it updates the user_id, platform, timezone, and updated_at timestamp.
+ * Also ensures that a default notification_preferences row exists for the user without
+ * overwriting any existing preferences.
  *
  * @param {string} userId - User UUID
  * @param {object} params
@@ -26,6 +30,23 @@ async function upsertDeviceToken(userId, { token, platform, timezone = 'UTC' }) 
   `;
 
   const { rows } = await pool.query(query, [userId, token, platform, timezone]);
+
+  // Ensure default notification preferences exist for this user without overwriting existing settings
+  await ensureNotificationPreferences(userId, timezone);
+
+  // Subscribe the token to the 'all-users' FCM topic so broadcast notifications reach this device.
+  // Wrapped in try/catch: a subscription failure must never break device-token registration.
+  if (firebaseService.isFirebaseConfigured()) {
+    try {
+      await firebaseService.subscribeTokenToTopic(token, 'all-users');
+    } catch (err) {
+      console.error(
+        '[upsertDeviceToken] Topic subscription failed (registration still succeeded):',
+        err.code || err.message
+      );
+    }
+  }
+
   return rows[0];
 }
 

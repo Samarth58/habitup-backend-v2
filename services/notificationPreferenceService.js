@@ -123,8 +123,36 @@ async function updateNotificationPreferences(userId, updates = {}) {
   return formatPreferences(rows[0]);
 }
 
+/**
+ * Ensures a notification preferences record exists for the given user.
+ * If no row exists, creates one with default settings and the specified timezone.
+ * If a row already exists, does nothing and preserves all existing settings.
+ *
+ * @param {string} userId - User UUID
+ * @param {string} [timezone='UTC'] - Fallback timezone if creating a new preferences row
+ * @returns {Promise<object>} The existing or newly created preferences record
+ */
+async function ensureNotificationPreferences(userId, timezone = 'UTC') {
+  const insertQuery = `
+    INSERT INTO notification_preferences (user_id, timezone)
+    VALUES ($1, COALESCE($2, 'UTC'))
+    ON CONFLICT (user_id)
+    DO NOTHING
+    RETURNING *;
+  `;
+
+  const { rows } = await pool.query(insertQuery, [userId, timezone || 'UTC']);
+  if (rows.length > 0) {
+    return formatPreferences(rows[0]);
+  }
+
+  return getNotificationPreferences(userId);
+}
+
 module.exports = {
   getNotificationPreferences,
   updateNotificationPreferences,
+  ensureNotificationPreferences,
   formatPreferences,
 };
+

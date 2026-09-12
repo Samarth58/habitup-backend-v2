@@ -65,8 +65,42 @@ function getFirebaseMessaging() {
   return getMessaging(app);
 }
 
+/**
+ * Subscribes a single FCM device token to an FCM topic.
+ * Safely repeatable — subscribing an already-subscribed token is a no-op.
+ *
+ * @param {string} token - FCM registration token
+ * @param {string} topic - FCM topic name (e.g. 'all-users')
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+async function subscribeTokenToTopic(token, topic) {
+  const messaging = getFirebaseMessaging();
+  try {
+    const response = await messaging.subscribeToTopic([token], topic);
+
+    if (response.failureCount > 0) {
+      const errorInfo = response.errors && response.errors[0];
+      const errorCode = errorInfo && errorInfo.error && errorInfo.error.code;
+      console.error(
+        `[subscribeTokenToTopic] Failed to subscribe token to topic "${topic}":`,
+        errorCode || (errorInfo && errorInfo.error && errorInfo.error.message) || 'unknown error'
+      );
+      return { success: false, error: errorCode };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error(
+      `[subscribeTokenToTopic] Error subscribing token to topic "${topic}":`,
+      err.code || err.message
+    );
+    throw err;
+  }
+}
+
 module.exports = {
   isFirebaseConfigured,
   getFirebaseAdminApp,
   getFirebaseMessaging,
+  subscribeTokenToTopic,
 };

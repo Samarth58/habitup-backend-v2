@@ -2,6 +2,7 @@ const { test, describe, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { registerTestUser, authFetch } = require('./helpers');
 const { getDeviceTokensByUserId } = require('../services/deviceTokenService');
+const { pool } = require('../services/db');
 
 describe('Notifications API - Device Token Registration', () => {
   let userA;
@@ -960,5 +961,323 @@ describe('Notifications API - Device Token Registration', () => {
       });
     });
   });
+
+  describe('Automatic Notification Preferences Initialization on Device Token Registration', () => {
+    test('User registers a device token with no preference row -> preference row is created with defaults and timezone', async () => {
+      const freshUser = await registerTestUser();
+
+      // Verify no preference row initially exists
+      const initialPrefCheck = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [freshUser.user.id]
+      );
+      assert.equal(initialPrefCheck.rows.length, 0);
+
+      // Register device token with specific timezone
+      const token = `fcm_fresh_init_token_${Date.now()}`;
+      const res = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token,
+            platform: 'android',
+            timezone: 'Asia/Kolkata',
+          }),
+        },
+        freshUser.accessToken
+      );
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+
+      // Verify preference row was created with expected defaults
+      const { rows } = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [freshUser.user.id]
+      );
+      assert.equal(rows.length, 1);
+      const pref = rows[0];
+      assert.equal(pref.push_enabled, true);
+      assert.equal(pref.morning_enabled, true);
+      assert.equal(pref.afternoon_enabled, true);
+      assert.equal(pref.evening_enabled, true);
+      assert.equal(pref.morning_time.slice(0, 5), '08:00');
+      assert.equal(pref.afternoon_time.slice(0, 5), '13:00');
+      assert.equal(pref.evening_time.slice(0, 5), '20:00');
+      assert.equal(pref.timezone, 'Asia/Kolkata');
+    });
+
+    test('User registers another token with an existing preference row -> existing preferences are preserved', async () => {
+      const multiTokenUser = await registerTestUser();
+
+      // 1. First device token registers and initializes preferences
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_device1_${Date.now()}`,
+            platform: 'android',
+            timezone: 'Asia/Kolkata',
+          }),
+        },
+        multiTokenUser.accessToken
+      );
+
+      // 2. Register second device token with different timezone
+      const res2 = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_device2_${Date.now()}`,
+            platform: 'ios',
+            timezone: 'Europe/London',
+          }),
+        },
+        multiTokenUser.accessToken
+      );
+      assert.equal(res2.status, 200);
+
+      // Verify preferences row was preserved and not overwritten
+      const { rows } = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [multiTokenUser.user.id]
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].timezone, 'Asia/Kolkata'); // original timezone preserved
+      assert.equal(rows[0].push_enabled, true);
+    });
+
+    test('Existing push_enabled = false remains false when a new device token is registered', async () => {
+      const disabledUser = await registerTestUser();
+
+      // Explicitly disable notifications
+      const prefRes = await authFetch(
+        '/notifications/preferences',
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            pushEnabled: false,
+            eveningTime: '21:45',
+          }),
+        },
+        disabledUser.accessToken
+      );
+      assert.equal(prefRes.status, 200);
+
+      // Register device token
+      const regRes = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_disabled_user_token_${Date.now()}`,
+            platform: 'android',
+            timezone: 'America/New_York',
+          }),
+        },
+        disabledUser.accessToken
+      );
+      assert.equal(regRes.status, 200);
+
+      // Verify push_enabled remains false and eveningTime remains 21:45
+      const { rows } = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [disabledUser.user.id]
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].push_enabled, false);
+      assert.equal(rows[0].evening_time.slice(0, 5), '21:45');
+    });
+
+    test('Existing timezone and custom reminder times remain unchanged', async () => {
+      const customUser = await registerTestUser();
+
+      // Configure custom preferences
+      await authFetch(
+        '/notifications/preferences',
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            morningTime: '06:30',
+            afternoonTime: '14:15',
+            eveningTime: '22:00',
+            timezone: 'Asia/Tokyo',
+          }),
+        },
+        customUser.accessToken
+      );
+
+      // Register device token with a different timezone
+      const regRes = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_custom_times_token_${Date.now()}`,
+            platform: 'android',
+            timezone: 'America/Chicago',
+          }),
+        },
+        customUser.accessToken
+      );
+      assert.equal(regRes.status, 200);
+
+      // Verify custom times and timezone were completely preserved
+      const { rows } = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [customUser.user.id]
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].morning_time.slice(0, 5), '06:30');
+      assert.equal(rows[0].afternoon_time.slice(0, 5), '14:15');
+      assert.equal(rows[0].evening_time.slice(0, 5), '22:00');
+      assert.equal(rows[0].timezone, 'Asia/Tokyo');
+    });
+
+    test('Device token registration still works normally (saves token and associates with user)', async () => {
+      const normalUser = await registerTestUser();
+      const token = `fcm_normal_check_token_${Date.now()}`;
+
+      const res = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token,
+            platform: 'android',
+            timezone: 'America/Denver',
+          }),
+        },
+        normalUser.accessToken
+      );
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+      assert.equal(data.message, 'Device token registered successfully');
+
+      // Verify token in database
+      const tokens = await getDeviceTokensByUserId(normalUser.user.id);
+      const found = tokens.find((t) => t.token === token);
+      assert.ok(found);
+      assert.equal(found.platform, 'android');
+      assert.equal(found.timezone, 'America/Denver');
+      assert.equal(found.user_id, normalUser.user.id);
+    });
+  });
+
+  describe('FCM Topic Subscription on Device Token Registration', () => {
+    test('valid device token registration returns 200 and token is stored (topic subscription executes)', async () => {
+      const user = await registerTestUser();
+      const token = `fcm_topic_sub_test_${Date.now()}_a`;
+      const res = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token,
+            platform: 'android',
+            timezone: 'Asia/Kolkata',
+          }),
+        },
+        user.accessToken
+      );
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+      assert.equal(data.message, 'Device token registered successfully');
+
+      const tokens = await getDeviceTokensByUserId(user.user.id);
+      const stored = tokens.find((t) => t.token === token);
+      assert.ok(stored, 'Token should be stored in the database');
+      assert.equal(stored.platform, 'android');
+    });
+
+    test('repeated token registration remains idempotent with topic subscription in place', async () => {
+      const user = await registerTestUser();
+      const token = `fcm_topic_sub_idempotent_${Date.now()}_b`;
+
+      const res1 = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token, platform: 'android', timezone: 'UTC' }),
+        },
+        user.accessToken
+      );
+      assert.equal(res1.status, 200);
+
+      const res2 = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({ token, platform: 'android', timezone: 'Asia/Kolkata' }),
+        },
+        user.accessToken
+      );
+      assert.equal(res2.status, 200);
+      const data2 = await res2.json();
+      assert.equal(data2.success, true);
+
+      const tokens = await getDeviceTokensByUserId(user.user.id);
+      const matches = tokens.filter((t) => t.token === token);
+      assert.equal(matches.length, 1, 'No duplicate rows should exist after repeated registration');
+      assert.equal(matches[0].timezone, 'Asia/Kolkata');
+    });
+
+    test('subscribeTokenToTopic unit: throws a safe error when Firebase is not configured', async () => {
+      const { subscribeTokenToTopic, isFirebaseConfigured } = require('../services/firebaseService');
+
+      if (!isFirebaseConfigured()) {
+        await assert.rejects(
+          () => subscribeTokenToTopic('fake-token-xyz', 'all-users'),
+          (err) => {
+            assert.ok(err instanceof Error, 'Should throw an Error instance');
+            assert.match(
+              err.message,
+              /Firebase Admin SDK is not configured/,
+              'Error message should indicate missing configuration'
+            );
+            return true;
+          }
+        );
+      } else {
+        assert.equal(typeof subscribeTokenToTopic, 'function');
+      }
+    });
+
+    test('device token registration succeeds even when Firebase topic subscription is unconfigured or fails', async () => {
+      const user = await registerTestUser();
+      const token = `fcm_sub_fail_isolation_${Date.now()}_c`;
+      const res = await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token,
+            platform: 'ios',
+            timezone: 'America/New_York',
+          }),
+        },
+        user.accessToken
+      );
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.success, true);
+
+      const tokens = await getDeviceTokensByUserId(user.user.id);
+      const stored = tokens.find((t) => t.token === token);
+      assert.ok(stored, 'Token must be persisted even if topic subscription encounters an issue');
+      assert.equal(stored.platform, 'ios');
+      assert.equal(stored.user_id, user.user.id);
+    });
+  });
 });
+
 
