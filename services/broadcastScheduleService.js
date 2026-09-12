@@ -43,7 +43,6 @@ const BROADCAST_SLOTS = {
   '10:30': 'morning_blast',
   '15:30': 'afternoon_blast',
   '19:30': 'evening_blast',
-  '22:25': 'evening_test_blast_2225',
 };
 
 /**
