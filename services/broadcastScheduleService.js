@@ -180,11 +180,16 @@ async function processAutomatedBroadcasts(currentTime = new Date(), timeZone = B
 
   // 2. Check Firebase configuration
   if (!isFirebaseConfigured()) {
+    const missing = [];
+    if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PROJECT_ID.trim()) missing.push('FIREBASE_PROJECT_ID');
+    if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_CLIENT_EMAIL.trim()) missing.push('FIREBASE_CLIENT_EMAIL');
+    if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_PRIVATE_KEY.trim()) missing.push('FIREBASE_PRIVATE_KEY');
+    const errMsg = `Firebase Admin SDK is not configured. Missing: ${missing.length > 0 ? missing.join(', ') : 'unknown'}`;
     await pool.query(
       `UPDATE broadcast_deliveries
-       SET status = 'failed', error_message = 'Firebase Admin SDK is not configured', sent_at = NOW()
-       WHERE id = $1`,
-      [deliveryId]
+       SET status = 'failed', error_message = $1, sent_at = NOW()
+       WHERE id = $2`,
+      [errMsg, deliveryId]
     );
     return { attempted: true, slotKey, status: 'firebase_unconfigured' };
   }
