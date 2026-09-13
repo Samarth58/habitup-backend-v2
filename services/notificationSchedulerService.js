@@ -208,16 +208,26 @@ async function processScheduledNotifications(currentTime = new Date()) {
 
   try {
     const { rows: userPrefs } = await pool.query(`
-      SELECT user_id, push_enabled, morning_enabled, afternoon_enabled, evening_enabled,
-             morning_time, afternoon_time, evening_time, timezone
-      FROM notification_preferences
-      WHERE push_enabled = true
+      SELECT 
+        u.id AS user_id,
+        COALESCE(np.push_enabled, true) AS push_enabled,
+        COALESCE(np.morning_enabled, true) AS morning_enabled,
+        COALESCE(np.afternoon_enabled, true) AS afternoon_enabled,
+        COALESCE(np.evening_enabled, true) AS evening_enabled,
+        COALESCE(np.morning_time, '08:00:00'::time) AS morning_time,
+        COALESCE(np.afternoon_time, '13:00:00'::time) AS afternoon_time,
+        COALESCE(np.evening_time, '20:00:00'::time) AS evening_time,
+        COALESCE(np.timezone, u.timezone, 'Asia/Kolkata') AS timezone
+      FROM users u
+      LEFT JOIN notification_preferences np ON np.user_id = u.id
+      WHERE COALESCE(np.push_enabled, true) = true
+        AND u.deleted_at IS NULL
     `);
 
     summary.processedUsers = userPrefs.length;
 
     for (const pref of userPrefs) {
-      const tz = pref.timezone || 'UTC';
+      const tz = pref.timezone || 'Asia/Kolkata';
       const { localDate, localTime } = getLocalDateTime(currentTime, tz);
 
       const morningTime = typeof pref.morning_time === 'string' ? pref.morning_time.slice(0, 5) : '08:00';
@@ -255,6 +265,23 @@ async function processScheduledNotifications(currentTime = new Date()) {
 let schedulerInterval = null;
 
 /**
+ * Initializes notification preference records for any existing users that lack them.
+ */
+async function initNotificationPreferences() {
+  try {
+    await pool.query(`
+      INSERT INTO notification_preferences (user_id, timezone)
+      SELECT u.id, COALESCE(u.timezone, 'Asia/Kolkata')
+      FROM users u
+      WHERE u.deleted_at IS NULL
+      ON CONFLICT (user_id) DO NOTHING
+    `);
+  } catch (err) {
+    console.error('[notificationScheduler] Failed to initialize default notification preferences:', err.message);
+  }
+}
+
+/**
  * Starts the periodic background notification scheduler.
  *
  * @param {number} [intervalMs=60000] - Interval between scheduler cycles in milliseconds
@@ -264,6 +291,11 @@ function startScheduler(intervalMs = 60000) {
   if (schedulerInterval) {
     return schedulerInterval;
   }
+
+  // Ensure default preferences exist for all current users on start
+  initNotificationPreferences().catch((err) => {
+    console.error('[notificationScheduler] initNotificationPreferences error:', err.message);
+  });
 
   schedulerInterval = setInterval(() => {
     processScheduledNotifications().catch((err) => {

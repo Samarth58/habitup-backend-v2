@@ -24,17 +24,22 @@ async function sendPushNotification(token, { title, body, data }) {
   }
 
   const messaging = firebaseService.getFirebaseMessaging();
+  const cleanTitle = title.trim();
+  const cleanBody = body.trim();
 
   const messagePayload = {
     token: token.trim(),
     notification: {
-      title: title.trim(),
-      body: body.trim(),
+      title: cleanTitle,
+      body: cleanBody,
+    },
+    data: {
+      title: cleanTitle,
+      body: cleanBody,
     },
     android: {
       priority: 'high',
       notification: {
-        channelId: (data && data.channelId) || 'high_importance_channel',
         sound: 'default',
         priority: 'max',
         defaultSound: true,
@@ -54,9 +59,9 @@ async function sendPushNotification(token, { title, body, data }) {
   };
 
   if (data && typeof data === 'object') {
-    messagePayload.data = Object.fromEntries(
-      Object.entries(data).map(([key, val]) => [key, String(val)])
-    );
+    for (const [key, val] of Object.entries(data)) {
+      messagePayload.data[key] = String(val);
+    }
   }
 
   try {
@@ -66,7 +71,6 @@ async function sendPushNotification(token, { title, body, data }) {
       messageId,
     };
   } catch (err) {
-    // Log safe diagnostic info without exposing private keys or sensitive payloads
     console.error('[sendPushNotification] Firebase messaging error:', err.code || err.message);
     throw err;
   }
@@ -90,16 +94,22 @@ async function sendTopicPushNotification(topic, { title, body, data }) {
   }
 
   const messaging = firebaseService.getFirebaseMessaging();
+  const cleanTitle = title.trim();
+  const cleanBody = body.trim();
+
   const messagePayload = {
     topic: topic.trim(),
     notification: {
-      title: title.trim(),
-      body: body.trim(),
+      title: cleanTitle,
+      body: cleanBody,
+    },
+    data: {
+      title: cleanTitle,
+      body: cleanBody,
     },
     android: {
       priority: 'high',
       notification: {
-        channelId: (data && data.channelId) || 'high_importance_channel',
         sound: 'default',
         priority: 'max',
         defaultSound: true,
@@ -119,9 +129,9 @@ async function sendTopicPushNotification(topic, { title, body, data }) {
   };
 
   if (data && typeof data === 'object') {
-    messagePayload.data = Object.fromEntries(
-      Object.entries(data).map(([key, val]) => [key, String(val)])
-    );
+    for (const [key, val] of Object.entries(data)) {
+      messagePayload.data[key] = String(val);
+    }
   }
 
   try {

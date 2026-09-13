@@ -137,6 +137,13 @@ async function createUser({ name, email, username, password, timezone, role = 'u
   const user = rows[0];
 
   try {
+    const { ensureNotificationPreferences } = require('./notificationPreferenceService');
+    await ensureNotificationPreferences(user.id, timezone || 'Asia/Kolkata');
+  } catch (err) {
+    console.error('[authService] ensureNotificationPreferences failed:', err.message);
+  }
+
+  try {
     const { logActivity } = require('./activityService');
     logActivity(user.id, 'REGISTER', {}).catch((err) =>
       console.error('[authService] Failed to log REGISTER:', err)
