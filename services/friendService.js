@@ -9,8 +9,8 @@ const {
 const { calculateBestStreak, getUserOverallStats } = require('./statsService');
 const { calculateStreak } = require('./streakService');
 const { logActivity } = require('./activityService');
-const { getDeviceTokensByUserId } = require('./deviceTokenService');
-const { sendPushNotification, isFirebaseConfigured } = require('./notificationService');
+const { getDeviceTokensByUserId, deleteDeviceToken } = require('./deviceTokenService');
+const notificationService = require('./notificationService');
 
 function serviceError(message, status) {
   const error = new Error(message);
@@ -75,6 +75,66 @@ async function sendFriendRequest(requesterId, recipientUsername) {
     recipient_id: recipient.id,
     recipient_username: recipient.username,
   }).catch((err) => console.error('[sendFriendRequest activity]', err));
+
+  if (notificationService.isFirebaseConfigured()) {
+    try {
+      const tokens = await getDeviceTokensByUserId(recipient.id);
+      console.log(`[sendFriendRequest notification] recipient=${recipient.id} tokens=${tokens.length}`);
+
+      if (tokens.length > 0) {
+        const { rows: requesterRows } = await pool.query(
+          `SELECT name, username FROM users WHERE id = $1 AND deleted_at IS NULL`,
+          [requesterId]
+        );
+        const requester = requesterRows[0];
+        const requesterName = requester?.name || requester?.username || 'Someone';
+
+        const title = 'New Friend Request';
+        const body = `${requesterName} sent you a friend request.`;
+        const data = {
+          type: 'friend_request',
+          requestId: String(result.rows[0].request_id),
+          senderId: String(requesterId),
+        };
+
+        await Promise.allSettled(
+          tokens.map(async ({ token, id: tokenId }) => {
+            try {
+              const sendRes = await notificationService.sendPushNotification(token, { title, body, data });
+              console.log(
+                `[sendFriendRequest notification] Push SUCCESS for recipient=${recipient.id} tokenId=${tokenId} messageId=${sendRes.messageId}`
+              );
+              return sendRes;
+            } catch (sendErr) {
+              console.error(
+                `[sendFriendRequest notification] Push FAILED for recipient=${recipient.id} tokenId=${tokenId}:`,
+                sendErr.code || sendErr.message
+              );
+
+              if (
+                sendErr.code === 'messaging/invalid-registration-token' ||
+                sendErr.code === 'messaging/registration-token-not-registered' ||
+                sendErr.code === 'messaging/invalid-argument' ||
+                (sendErr.message && sendErr.message.includes('not a valid FCM registration token'))
+              ) {
+                try {
+                  await deleteDeviceToken(token);
+                  console.log(
+                    `[sendFriendRequest notification] Pruned invalid device token (tokenId=${tokenId}) for user ${recipient.id}`
+                  );
+                } catch (pruneErr) {
+                  console.error(`[sendFriendRequest notification] Failed to prune invalid token:`, pruneErr.message);
+                }
+              }
+              throw sendErr;
+            }
+          })
+        );
+      }
+    } catch (notifyErr) {
+      console.error('[sendFriendRequest notification] Non-blocking notification error:', notifyErr.message);
+    }
+  }
 
   return { ...result.rows[0], to_username: recipient.username };
 }
@@ -229,7 +289,7 @@ async function sendNudge(senderId, friendId, habitName = '') {
     };
   }
 
-  if (!isFirebaseConfigured()) {
+  if (!notificationService.isFirebaseConfigured()) {
     throw serviceError('Firebase Admin SDK is not configured.', 503);
   }
 
@@ -237,7 +297,7 @@ async function sendNudge(senderId, friendId, habitName = '') {
   const body = cleanHabitName
     ? `${sender.name || sender.username} nudged you to complete your ${cleanHabitName}`
     : `${sender.name || sender.username} sent you a habit nudge`;
-  const results = await Promise.allSettled(tokens.map(({ token }) => sendPushNotification(token, {
+  const results = await Promise.allSettled(tokens.map(({ token }) => notificationService.sendPushNotification(token, {
     title: 'Habit Nudge 👋',
     body,
     data: {
