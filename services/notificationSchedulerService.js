@@ -153,16 +153,21 @@ async function processSingleNotification(userId, notificationType, localDate, lo
       lastError = sendErr.message || String(sendErr);
       console.error(`[notificationScheduler] Push dispatch failed for token on user ${userId}:`, lastError);
 
-      // Auto-prune invalid or unregistered tokens so we don't repeatedly fail on stale test tokens
+      // Auto-prune invalid, unregistered, or mismatched tokens so we don't repeatedly fail
       if (
         sendErr.code === 'messaging/invalid-registration-token' ||
         sendErr.code === 'messaging/registration-token-not-registered' ||
         sendErr.code === 'messaging/invalid-argument' ||
-        (sendErr.message && sendErr.message.includes('not a valid FCM registration token'))
+        (sendErr.message && (
+          sendErr.message.includes('not a valid FCM registration token') ||
+          sendErr.message.includes('NotRegistered') ||
+          sendErr.message.includes('SenderId mismatch') ||
+          sendErr.message.includes('not registered')
+        ))
       ) {
         try {
           await deleteDeviceToken(dt.token);
-          console.log(`[notificationScheduler] Pruned invalid device token for user ${userId}`);
+          console.log(`[notificationScheduler] Pruned invalid/mismatched device token for user ${userId}`);
         } catch (pruneErr) {
           console.error(`[notificationScheduler] Failed to prune invalid token:`, pruneErr.message);
         }
@@ -191,7 +196,7 @@ async function processSingleNotification(userId, notificationType, localDate, lo
 
 /**
  * Runs one scheduler cycle for the given current time.
- * Evaluates all users with push_enabled = true and sends due notifications.
+ * Evaluates all users with push_enabled = true who have registered active device tokens.
  *
  * @param {Date} [currentTime=new Date()]
  * @returns {Promise<{ processedUsers: number, dueNotifications: number, sent: number, skippedNoToken: number, alreadyDelivered: number, failed: number }>}
@@ -222,6 +227,7 @@ async function processScheduledNotifications(currentTime = new Date()) {
       LEFT JOIN notification_preferences np ON np.user_id = u.id
       WHERE COALESCE(np.push_enabled, true) = true
         AND u.deleted_at IS NULL
+        AND EXISTS (SELECT 1 FROM device_tokens dt WHERE dt.user_id = u.id)
     `);
 
     summary.processedUsers = userPrefs.length;

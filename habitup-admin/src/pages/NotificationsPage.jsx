@@ -230,6 +230,20 @@ export function NotificationsPage() {
         return <span className="badge-tag badge-success">Sent</span>;
       case 'Failed':
         return <span className="badge-tag badge-danger">Failed</span>;
+      case 'Skipped':
+      case 'Skipped (No Device)':
+        return (
+          <span
+            className="badge-tag"
+            style={{
+              background: 'rgba(241, 245, 249, 0.95)',
+              color: 'var(--text-muted)',
+              border: '1px solid rgba(203, 213, 225, 0.8)',
+            }}
+          >
+            Skipped (No Device)
+          </span>
+        );
       case 'Pending':
         return <span className="badge-tag badge-warning">Pending</span>;
       default:
@@ -388,6 +402,7 @@ export function NotificationsPage() {
             <option value="">All Statuses</option>
             <option value="Sent">Sent</option>
             <option value="Failed">Failed</option>
+            <option value="Skipped">Skipped (No Device)</option>
             <option value="Pending">Pending</option>
           </select>
 

@@ -75,6 +75,24 @@ describe('Notification Scheduler Service', () => {
     );
   });
 
+  beforeEach(async () => {
+    // Ensure test users have active device tokens in test database
+    if (userKolkata && userKolkata.user) {
+      await upsertDeviceToken(userKolkata.user.id, {
+        token: `mock_fcm_kolkata_${userKolkata.user.id}`,
+        platform: 'android',
+        timezone: 'Asia/Kolkata',
+      });
+    }
+    if (userNewYork && userNewYork.user) {
+      await upsertDeviceToken(userNewYork.user.id, {
+        token: `mock_fcm_ny_${userNewYork.user.id}`,
+        platform: 'ios',
+        timezone: 'America/New_York',
+      });
+    }
+  });
+
   describe('Timezone & Date/Time Conversion Logic', () => {
     test('converts UTC time to accurate local date and time for Asia/Kolkata (+05:30)', () => {
       // 2026-09-11 02:30 UTC -> 2026-09-11 08:00 IST
@@ -324,25 +342,12 @@ describe('Notification Scheduler Service', () => {
   describe('Device Token Handling & Resilience', () => {
     test('user without registered device tokens is marked as skipped_no_token safely without crashing', async () => {
       const noTokenUser = await registerTestUser();
-      await authFetch(
-        '/notifications/preferences',
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            pushEnabled: true,
-            morningEnabled: true,
-            morningTime: '08:00',
-            timezone: 'UTC',
-          }),
-        },
-        noTokenUser.accessToken
-      );
+      const { processSingleNotification } = require('../services/notificationSchedulerService');
+      const summary = { skippedNoToken: 0, sent: 0, failed: 0, alreadyDelivered: 0 };
 
-      // 08:00 UTC
-      const targetTime = new Date('2026-09-16T08:00:00.000Z');
-      const result = await processScheduledNotifications(targetTime);
+      await processSingleNotification(noTokenUser.user.id, 'morning', '2026-09-16', '08:00', 'UTC', summary);
 
-      assert.ok(result.skippedNoToken >= 1);
+      assert.equal(summary.skippedNoToken, 1);
 
       const { rows } = await pool.query(
         `SELECT * FROM notification_deliveries WHERE user_id = $1 AND scheduled_local_date = '2026-09-16'`,
@@ -390,6 +395,40 @@ describe('Notification Scheduler Service', () => {
       assert.equal(rows.length, 1);
       // Status is sent (or failed in unconfigured test env) and records attempt
       assert.ok(['sent', 'failed'].includes(rows[0].status));
+    });
+
+    test('users without any registered device tokens are filtered out from scheduler batch query', async () => {
+      const webOnlyUser = await registerTestUser();
+      await authFetch(
+        '/notifications/preferences',
+        {
+          method: 'PUT',
+          body: JSON.stringify({
+            pushEnabled: true,
+            morningEnabled: true,
+            morningTime: '08:00',
+            timezone: 'UTC',
+          }),
+        },
+        webOnlyUser.accessToken
+      );
+
+      // Clean deliveries
+      await pool.query(
+        `DELETE FROM notification_deliveries WHERE user_id = $1`,
+        [webOnlyUser.user.id]
+      );
+
+      const targetTime = new Date('2026-09-18T08:00:00.000Z');
+      await processScheduledNotifications(targetTime);
+
+      // Should not even create notification_deliveries records because user had no tokens
+      const { rows } = await pool.query(
+        `SELECT * FROM notification_deliveries WHERE user_id = $1 AND scheduled_local_date = '2026-09-18'`,
+        [webOnlyUser.user.id]
+      );
+
+      assert.equal(rows.length, 0);
     });
   });
 });

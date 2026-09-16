@@ -251,6 +251,7 @@ async function getNotifications(req, res) {
           CASE 
             WHEN nd.status = 'sent' OR nd.status = 'delivered' THEN 'Sent'
             WHEN nd.status = 'failed' THEN 'Failed'
+            WHEN nd.status = 'skipped_no_token' THEN 'Skipped'
             ELSE 'Pending'
           END as status,
           nd.error_message as "errorReason",
@@ -418,7 +419,13 @@ async function sendUserNotification(req, res) {
         if (
           err.code === 'messaging/registration-token-not-registered' ||
           err.code === 'messaging/invalid-registration-token' ||
-          (err.message && err.message.includes('not registered'))
+          err.code === 'messaging/invalid-argument' ||
+          (err.message && (
+            err.message.includes('not a valid FCM registration token') ||
+            err.message.includes('NotRegistered') ||
+            err.message.includes('SenderId mismatch') ||
+            err.message.includes('not registered')
+          ))
         ) {
           await deleteDeviceToken(dt.token).catch(() => {});
         }
