@@ -1,16 +1,36 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
 import { KPICard } from '../components/KPICard';
+
+const CATEGORY_MAP = {
+  'Daily Reminder': 'motivation',
+  'Friend Request': 'announcement',
+  'Friend Nudge': 'encouragement',
+  'Achievement': 'streak',
+  'System Notification': 'announcement',
+  'Evening Reminder': 'habit_tip',
+};
 
 export function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
+  const [stats, setStats] = useState({ total: 0, sent: 0, failed: 0, pending: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+
+  // Dialog & alerts
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
-  // Form state for Send Notification modal
+  // Form state
   const [formData, setFormData] = useState({
     type: 'Daily Reminder',
     recipients: 'All Users',
@@ -19,6 +39,29 @@ export function NotificationsPage() {
     message: '',
   });
   const [formError, setFormError] = useState('');
+
+  // Fetch real notification records from backend
+  const fetchNotifications = useCallback(() => {
+    setLoading(true);
+    setError('');
+
+    api.getNotificationsList({ page, limit: 50 })
+      .then((res) => {
+        setNotifications(res.notifications || []);
+        if (res.stats) setStats(res.stats);
+        if (res.pagination) setPagination(res.pagination);
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load notifications history.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [page]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   // Keyboard accessibility: Close modals on Escape key
   useEffect(() => {
@@ -34,24 +77,15 @@ export function NotificationsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSendModalOpen, selectedNotification]);
 
-  // Statistics calculation
-  const stats = useMemo(() => {
-    const total = notifications.length;
-    const sent = notifications.filter((n) => n.status === 'Sent').length;
-    const failed = notifications.filter((n) => n.status === 'Failed').length;
-    const pending = notifications.filter((n) => n.status === 'Pending').length;
-    return { total, sent, failed, pending };
-  }, [notifications]);
-
   // Filtered notifications list
   const filteredNotifications = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return notifications.filter((item) => {
       const matchesSearch =
         !query ||
-        item.title.toLowerCase().includes(query) ||
-        item.recipient.toLowerCase().includes(query) ||
-        item.type.toLowerCase().includes(query) ||
+        (item.title && item.title.toLowerCase().includes(query)) ||
+        (item.recipient && item.recipient.toLowerCase().includes(query)) ||
+        (item.type && item.type.toLowerCase().includes(query)) ||
         (item.message && item.message.toLowerCase().includes(query));
 
       const matchesType = !typeFilter || item.type === typeFilter;
@@ -78,7 +112,7 @@ export function NotificationsPage() {
     setFormError('');
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
 
@@ -92,31 +126,28 @@ export function NotificationsPage() {
       return;
     }
 
-    if (formData.recipients === 'Selected User' && !formData.selectedUser.trim()) {
-      setFormError('Please specify the recipient user account.');
-      return;
+    setSubmitting(true);
+
+    try {
+      const category = CATEGORY_MAP[formData.type] || 'announcement';
+      const response = await api.sendBroadcastNotification({
+        title: formData.title.trim(),
+        body: formData.message.trim(),
+        category,
+      });
+
+      setIsSendModalOpen(false);
+      setSuccessToast(response.message || 'Push notification dispatched successfully to all subscribed devices!');
+      fetchNotifications();
+
+      setTimeout(() => {
+        setSuccessToast('');
+      }, 5000);
+    } catch (err) {
+      setFormError(err.message || 'Failed to dispatch notification to Firebase.');
+    } finally {
+      setSubmitting(false);
     }
-
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      title: formData.title.trim(),
-      message: formData.message.trim(),
-      type: formData.type,
-      recipient: formData.recipients === 'Selected User' ? formData.selectedUser.trim() : 'All Users',
-      recipientType: formData.recipients === 'Selected User' ? 'single' : 'all',
-      status: 'Sent',
-      sentAt: 'Just now',
-      timestamp: Date.now(),
-    };
-
-    setNotifications((prev) => [newNotif, ...prev]);
-    setIsSendModalOpen(false);
-    setSuccessToast(`Notification "${newNotif.title}" was successfully queued.`);
-
-    const timer = setTimeout(() => {
-      setSuccessToast('');
-    }, 4500);
-    return () => clearTimeout(timer);
   };
 
   const getStatusBadge = (status) => {
@@ -165,6 +196,8 @@ export function NotificationsPage() {
           </button>
         </div>
       </div>
+
+      {error && <div className="error-alert">{error}</div>}
 
       {/* Success Notification Alert */}
       {successToast && (
@@ -267,6 +300,8 @@ export function NotificationsPage() {
             <option value="Evening Reminder">Evening Reminder</option>
             <option value="Achievement">Achievement</option>
             <option value="System Notification">System Notification</option>
+            <option value="motivation">Motivation</option>
+            <option value="announcement">Announcement</option>
           </select>
 
           <select
@@ -312,7 +347,13 @@ export function NotificationsPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredNotifications.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
+                  Loading real notifications history from database...
+                </td>
+              </tr>
+            ) : filteredNotifications.length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
                   {notifications.length === 0
@@ -374,7 +415,7 @@ export function NotificationsPage() {
                         }}
                         aria-hidden="true"
                       >
-                        {notif.recipient === 'All Users' ? '👥' : notif.recipient.charAt(0).toUpperCase()}
+                        {notif.recipient === 'All Users' ? '👥' : (notif.recipient ? notif.recipient.charAt(0).toUpperCase() : 'U')}
                       </span>
                       <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.84rem' }}>
                         {notif.recipient}
@@ -407,8 +448,27 @@ export function NotificationsPage() {
       {/* Pagination Footer */}
       <div className="pagination">
         <span>
-          Showing <strong>{filteredNotifications.length}</strong> of <strong>{notifications.length}</strong> total records
+          Showing <strong>{filteredNotifications.length}</strong> of <strong>{pagination.total || notifications.length}</strong> total records
         </span>
+
+        {pagination.totalPages > 1 && (
+          <div className="filter-group">
+            <button
+              className="pagination-btn"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            >
+              ← Previous
+            </button>
+            <button
+              className="pagination-btn"
+              disabled={page >= pagination.totalPages || loading}
+              onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+            >
+              Next →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Send Notification Modal Dialog */}
@@ -438,17 +498,17 @@ export function NotificationsPage() {
                 Send Notification
               </h2>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                Broadcast a push notification to HabitUp users.
+                Broadcast a real push notification via Firebase Cloud Messaging (FCM).
               </p>
             </div>
 
             {formError && <div className="error-alert" role="alert">{formError}</div>}
 
             <form onSubmit={handleFormSubmit}>
-              {/* Notification Type */}
+              {/* Notification Type / Category */}
               <div className="form-group">
                 <label className="form-label" htmlFor="notif-type">
-                  Notification Type
+                  Notification Category
                 </label>
                 <select
                   id="notif-type"
@@ -456,18 +516,18 @@ export function NotificationsPage() {
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 >
-                  <option value="Daily Reminder">Daily Reminder</option>
-                  <option value="Friend Request">Friend Request</option>
-                  <option value="Friend Nudge">Friend Nudge</option>
-                  <option value="Achievement">Achievement</option>
-                  <option value="System Notification">System Notification</option>
+                  <option value="Daily Reminder">Daily Reminder (Motivation)</option>
+                  <option value="Friend Nudge">Friend Nudge (Encouragement)</option>
+                  <option value="Achievement">Achievement (Streak)</option>
+                  <option value="System Notification">System Notification (Announcement)</option>
+                  <option value="Evening Reminder">Evening Reminder (Habit Tip)</option>
                 </select>
               </div>
 
               {/* Recipients */}
               <div className="form-group">
                 <label className="form-label" htmlFor="notif-recipients">
-                  Recipients
+                  Audience
                 </label>
                 <select
                   id="notif-recipients"
@@ -475,27 +535,9 @@ export function NotificationsPage() {
                   value={formData.recipients}
                   onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
                 >
-                  <option value="All Users">All Users</option>
-                  <option value="Selected User">Selected User</option>
+                  <option value="All Users">All Users (all-users topic)</option>
                 </select>
               </div>
-
-              {/* Conditional Selected User Input */}
-              {formData.recipients === 'Selected User' && (
-                <div className="form-group fade-in">
-                  <label className="form-label" htmlFor="notif-user">
-                    User Account / Username
-                  </label>
-                  <input
-                    id="notif-user"
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. Samarth or @username"
-                    value={formData.selectedUser}
-                    onChange={(e) => setFormData({ ...formData, selectedUser: e.target.value })}
-                  />
-                </div>
-              )}
 
               {/* Title */}
               <div className="form-group">
@@ -505,26 +547,30 @@ export function NotificationsPage() {
                 <input
                   id="notif-title"
                   type="text"
+                  maxLength={120}
                   className="form-input"
-                  placeholder="e.g. Don't break your streak!"
+                  placeholder="e.g. Keep Going! 🔥"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  disabled={submitting}
                 />
               </div>
 
               {/* Message */}
               <div className="form-group">
                 <label className="form-label" htmlFor="notif-message">
-                  Message
+                  Message Body
                 </label>
                 <textarea
                   id="notif-message"
                   className="form-input"
                   rows={4}
-                  placeholder="Enter notification message..."
+                  maxLength={1000}
+                  placeholder="Enter notification message body..."
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   style={{ resize: 'vertical', minHeight: '85px' }}
+                  disabled={submitting}
                 />
               </div>
 
@@ -545,12 +591,14 @@ export function NotificationsPage() {
                   className="pagination-btn"
                   onClick={handleCloseSendModal}
                   style={{ minWidth: '90px' }}
+                  disabled={submitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="action-btn"
+                  disabled={submitting}
                   style={{
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#ffffff',
@@ -561,7 +609,7 @@ export function NotificationsPage() {
                     minWidth: '150px',
                   }}
                 >
-                  Send Notification
+                  {submitting ? 'Sending...' : 'Send Notification'}
                 </button>
               </div>
             </form>
@@ -616,7 +664,7 @@ export function NotificationsPage() {
                   Message Content
                 </div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
-                  {selectedNotification.message || 'No additional message text provided.'}
+                  {selectedNotification.message || 'No additional message body provided.'}
                 </div>
               </div>
 

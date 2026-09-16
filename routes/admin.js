@@ -8,6 +8,7 @@ const {
   getActivityAnalytics,
   listAllExperiments,
   getExperimentReport,
+  getNotifications,
 } = require('../controllers/adminController');
 const { sendBroadcast } = require('../controllers/broadcastController');
 const { requireAuth } = require('../middleware/authMiddleware');
@@ -19,6 +20,26 @@ const router = Router();
 
 // Protect all admin endpoints with both authentication and database-checked admin authorization
 router.use(requireAuth, requireAdmin);
+
+/**
+ * @swagger
+ * /admin/notifications:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Retrieve paginated notifications history and summary statistics
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 50 }
+ *     responses:
+ *       200: { description: Notification history list }
+ */
+router.get('/notifications', getNotifications);
 
 /**
  * @swagger

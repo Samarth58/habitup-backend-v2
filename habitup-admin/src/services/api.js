@@ -153,4 +153,19 @@ export const api = {
   async getExperimentAnalytics(name = 'friends_feature_v1') {
     return apiRequest(`/admin/experiments/${encodeURIComponent(name)}`);
   },
+
+  async getNotificationsList(params = {}) {
+    const query = new URLSearchParams();
+    if (params.page) query.append('page', params.page);
+    if (params.limit) query.append('limit', params.limit);
+
+    return apiRequest(`/admin/notifications?${query.toString()}`);
+  },
+
+  async sendBroadcastNotification(data) {
+    return apiRequest('/admin/notifications/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };
