@@ -294,4 +294,98 @@ describe('Admin Dashboard API Suite', () => {
       assert.equal(body.pagination.page, 1);
     });
   });
+
+  describe('User Search Endpoint (GET /admin/users/search)', () => {
+    test('23. GET /admin/users/search unauthenticated returns 401', async () => {
+      const res = await authFetch('/admin/users/search?q=test');
+      assert.equal(res.status, 401);
+    });
+
+    test('24. GET /admin/users/search as non-admin returns 403', async () => {
+      const res = await authFetch('/admin/users/search?q=test', {}, regularUser.accessToken);
+      assert.equal(res.status, 403);
+    });
+
+    test('25. GET /admin/users/search as admin returns matching users and excludes sensitive fields', async () => {
+      const res = await authFetch(`/admin/users/search?q=${encodeURIComponent(regularUser.email)}`, {}, adminUser.accessToken);
+      const body = await res.json();
+
+      assert.equal(res.status, 200);
+      assert.ok(Array.isArray(body.users));
+      assert.ok(body.users.length > 0);
+
+      const found = body.users.find(u => u.id === regularUser.user.id);
+      assert.ok(found);
+      assert.equal(found.email, regularUser.email);
+      assert.equal(found.password_hash, undefined);
+      assert.equal(found.refresh_token_hash, undefined);
+      assert.equal(found.fcm_token, undefined);
+    });
+  });
+
+  describe('Specific User Notification Endpoint (POST /admin/notifications/user/:userId)', () => {
+    test('26. POST /admin/notifications/user/:userId unauthenticated returns 401', async () => {
+      const res = await authFetch(`/admin/notifications/user/${regularUser.user.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Test', message: 'Hello user' }),
+      });
+      assert.equal(res.status, 401);
+    });
+
+    test('27. POST /admin/notifications/user/:userId as non-admin returns 403', async () => {
+      const res = await authFetch(`/admin/notifications/user/${regularUser.user.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Test', message: 'Hello user' }),
+      }, regularUser.accessToken);
+      assert.equal(res.status, 403);
+    });
+
+    test('28. POST /admin/notifications/user/:userId with invalid UUID returns 400', async () => {
+      const res = await authFetch('/admin/notifications/user/invalid-uuid-format', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Test', message: 'Hello user' }),
+      }, adminUser.accessToken);
+      assert.equal(res.status, 400);
+    });
+
+    test('29. POST /admin/notifications/user/:userId for nonexistent user returns 404', async () => {
+      const res = await authFetch(`/admin/notifications/user/${VALID_UUID}`, {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Test', message: 'Hello user' }),
+      }, adminUser.accessToken);
+      assert.equal(res.status, 404);
+    });
+
+    test('30. POST /admin/notifications/user/:userId with empty title or message returns 400', async () => {
+      const resNoTitle = await authFetch(`/admin/notifications/user/${regularUser.user.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ title: '', message: 'Hello' }),
+      }, adminUser.accessToken);
+      assert.equal(resNoTitle.status, 400);
+
+      const resNoMessage = await authFetch(`/admin/notifications/user/${regularUser.user.id}`, {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Hello', message: '' }),
+      }, adminUser.accessToken);
+      assert.equal(resNoMessage.status, 400);
+    });
+
+    test('31. POST /admin/notifications/user/:userId for user with no active device tokens returns 400 with noToken=true', async () => {
+      // regularUser has no device tokens registered yet
+      const res = await authFetch(`/admin/notifications/user/${regularUser.user.id}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: 'Direct Message',
+          message: 'Personal streak reminder',
+          category: 'streak',
+        }),
+      }, adminUser.accessToken);
+
+      const body = await res.json();
+      assert.equal(res.status, 400);
+      assert.equal(body.success, false);
+      assert.equal(body.noToken, true);
+      assert.equal(body.error, 'User has no registered active device tokens');
+    });
+  });
 });

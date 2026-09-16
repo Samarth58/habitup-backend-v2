@@ -9,6 +9,8 @@ const {
   listAllExperiments,
   getExperimentReport,
   getNotifications,
+  searchUsers,
+  sendUserNotification,
 } = require('../controllers/adminController');
 const { sendBroadcast } = require('../controllers/broadcastController');
 const { requireAuth } = require('../middleware/authMiddleware');
@@ -70,6 +72,58 @@ router.get('/notifications', getNotifications);
  *       503: { description: Firebase Admin SDK is not configured }
  */
 router.post('/notifications/broadcast', broadcastLimiter, sendBroadcast);
+
+/**
+ * @swagger
+ * /admin/notifications/user/{userId}:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Send an admin notification to a specific user's active device(s)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema: { type: string, format: uuid }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [title, message]
+ *             properties:
+ *               title: { type: string, maxLength: 120 }
+ *               message: { type: string, maxLength: 1000 }
+ *               category: { type: string }
+ *     responses:
+ *       200: { description: Notification sent successfully }
+ *       400: { description: Invalid request or user has no device tokens }
+ *       404: { description: User not found }
+ *       502: { description: FCM delivery failed }
+ */
+router.post('/notifications/user/:userId', validateUuid('userId'), sendUserNotification);
+
+/**
+ * @swagger
+ * /admin/users/search:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Search users safely for target selection
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: q
+ *         schema: { type: string }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 20 }
+ *     responses:
+ *       200: { description: Matching user list }
+ */
+router.get('/users/search', searchUsers);
 
 /**
  * @swagger

@@ -1,4 +1,6 @@
 const { pool } = require('../services/db');
+const { getDeviceTokensByUserId, deleteDeviceToken } = require('../services/deviceTokenService');
+const { sendPushNotification, isFirebaseConfigured } = require('../services/notificationService');
 
 const {
   getDashboardStats,
@@ -232,9 +234,18 @@ async function getNotifications(req, res) {
 
         SELECT 
           nd.id,
-          nd.notification_type as title,
-          CONCAT('Scheduled local reminder for ', nd.scheduled_local_time, ' (', nd.timezone, ')') as message,
-          nd.notification_type as type,
+          CASE 
+            WHEN nd.notification_type LIKE 'admin_%' THEN 'Admin Direct Message'
+            ELSE nd.notification_type
+          END as title,
+          CASE 
+            WHEN nd.notification_type LIKE 'admin_%' THEN 'Direct push notification sent to user device'
+            ELSE CONCAT('Scheduled local reminder for ', nd.scheduled_local_time, ' (', nd.timezone, ')')
+          END as message,
+          CASE 
+            WHEN nd.notification_type LIKE 'admin_%' THEN 'Direct Message'
+            ELSE nd.notification_type
+          END as type,
           COALESCE(u.name, u.email, 'User') as recipient,
           'single' as "recipientType",
           CASE 
@@ -281,6 +292,184 @@ async function getNotifications(req, res) {
   }
 }
 
+/**
+ * GET /admin/users/search
+ * Fast, lightweight user search returning safe identifying fields for admin selectors.
+ */
+async function searchUsers(req, res) {
+  const { q = '', limit = 20 } = req.query;
+  const safeLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 20));
+  const query = (q || '').trim();
+
+  try {
+    let sql = `
+      SELECT id, name, email, username, role, created_at
+      FROM users
+      WHERE deleted_at IS NULL
+    `;
+    const params = [];
+
+    if (query) {
+      params.push(`%${query}%`);
+      sql += ` AND (email ILIKE $1 OR username ILIKE $1 OR name ILIKE $1)`;
+    }
+
+    params.push(safeLimit);
+    sql += ` ORDER BY created_at DESC LIMIT $${params.length};`;
+
+    const { rows } = await pool.query(sql, params);
+    return res.json({ users: rows });
+  } catch (err) {
+    console.error('[searchUsers]', err);
+    return res.status(500).json({ error: 'Failed to search users.' });
+  }
+}
+
+/**
+ * POST /admin/notifications/user/:userId
+ * Sends an admin push notification to all active device tokens belonging to a specific user.
+ */
+async function sendUserNotification(req, res) {
+  const { userId } = req.params;
+  const { title, message, body, type, category } = req.body || {};
+
+  const cleanTitle = (title || '').trim();
+  const cleanBody = (message || body || '').trim();
+
+  if (!cleanTitle) {
+    return res.status(400).json({ error: 'title is required and must be a non-empty string.' });
+  }
+  if (cleanTitle.length > 120) {
+    return res.status(400).json({ error: 'title must be 120 characters or fewer.' });
+  }
+
+  if (!cleanBody) {
+    return res.status(400).json({ error: 'message is required and must be a non-empty string.' });
+  }
+  if (cleanBody.length > 1000) {
+    return res.status(400).json({ error: 'message must be 1000 characters or fewer.' });
+  }
+
+  try {
+    // 1. Verify user exists and is active
+    const userRes = await pool.query(
+      'SELECT id, name, email, timezone FROM users WHERE id = $1 AND deleted_at IS NULL',
+      [userId]
+    );
+
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const targetUser = userRes.rows[0];
+
+    // 2. Query user's active device tokens
+    const deviceTokens = await getDeviceTokensByUserId(userId);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const timeStr = new Date().toTimeString().slice(0, 5);
+    const notifType = `admin_${Date.now().toString().slice(-8)}`;
+
+    if (!deviceTokens || deviceTokens.length === 0) {
+      // Log skipped delivery to notification_deliveries
+      try {
+        await pool.query(
+          `INSERT INTO notification_deliveries
+           (user_id, notification_type, scheduled_local_date, scheduled_local_time, timezone, status, device_count, error_message, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'skipped_no_token', 0, 'User has no registered active device tokens', NOW())`,
+          [userId, notifType, today, timeStr, targetUser.timezone || 'UTC']
+        );
+      } catch (dbErr) {
+        console.warn('[sendUserNotification] db log skipped error:', dbErr.message);
+      }
+
+      return res.status(400).json({
+        success: false,
+        noToken: true,
+        error: 'User has no registered active device tokens',
+      });
+    }
+
+    // 3. Verify Firebase configuration
+    if (!isFirebaseConfigured()) {
+      return res.status(503).json({ error: 'Firebase Admin SDK is not configured.' });
+    }
+
+    // 4. Dispatch notification to all user's registered device tokens
+    let successCount = 0;
+    const messageIds = [];
+    const errors = [];
+
+    for (const dt of deviceTokens) {
+      try {
+        const result = await sendPushNotification(dt.token, {
+          title: cleanTitle,
+          body: cleanBody,
+          data: {
+            type: type || category || 'admin_direct',
+            recipient_id: String(userId),
+            ...(category ? { category } : {}),
+          },
+        });
+        successCount++;
+        messageIds.push(result.messageId);
+      } catch (err) {
+        errors.push(err.message || 'FCM delivery failed');
+        if (
+          err.code === 'messaging/registration-token-not-registered' ||
+          err.code === 'messaging/invalid-registration-token' ||
+          (err.message && err.message.includes('not registered'))
+        ) {
+          await deleteDeviceToken(dt.token).catch(() => {});
+        }
+      }
+    }
+
+    const isSuccess = successCount > 0;
+    const status = isSuccess ? 'sent' : 'failed';
+    const errorMsg = errors.length > 0 ? errors.join('; ') : null;
+
+    // 5. Log delivery into notification_deliveries
+    try {
+      await pool.query(
+        `INSERT INTO notification_deliveries
+         (user_id, notification_type, scheduled_local_date, scheduled_local_time, timezone, status, device_count, sent_at, error_message, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
+        [
+          userId,
+          notifType,
+          today,
+          timeStr,
+          targetUser.timezone || 'UTC',
+          status,
+          deviceTokens.length,
+          isSuccess ? new Date() : null,
+          errorMsg,
+        ]
+      );
+    } catch (dbErr) {
+      console.warn('[sendUserNotification] db log error:', dbErr.message);
+    }
+
+    if (!isSuccess) {
+      return res.status(502).json({
+        error: errorMsg || 'Failed to send push notification to user device.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Notification sent successfully to ${targetUser.name || targetUser.email}.`,
+      recipient: targetUser.name || targetUser.email,
+      deviceCount: successCount,
+      messageIds,
+    });
+  } catch (err) {
+    console.error('[sendUserNotification]', err);
+    return res.status(500).json({ error: 'Failed to send notification to user.' });
+  }
+}
+
 module.exports = {
   getDashboard,
   listUsers,
@@ -291,4 +480,6 @@ module.exports = {
   listAllExperiments,
   getExperimentReport,
   getNotifications,
+  searchUsers,
+  sendUserNotification,
 };

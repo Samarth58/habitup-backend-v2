@@ -72,7 +72,11 @@ export async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorMsg = data.error || data.message || `HTTP ${response.status} Error`;
-    throw new Error(errorMsg);
+    const err = new Error(errorMsg);
+    err.data = data;
+    err.status = response.status;
+    err.noToken = data.noToken || false;
+    throw err;
   }
 
   return data;
@@ -110,6 +114,13 @@ export const api = {
     if (params.order) query.append('order', params.order);
 
     return apiRequest(`/admin/users?${query.toString()}`);
+  },
+
+  async searchUsers(query = '', limit = 20) {
+    const qParams = new URLSearchParams();
+    if (query) qParams.append('q', query);
+    if (limit) qParams.append('limit', limit);
+    return apiRequest(`/admin/users/search?${qParams.toString()}`);
   },
 
   async getUserDetail(userId) {
@@ -164,6 +175,13 @@ export const api = {
 
   async sendBroadcastNotification(data) {
     return apiRequest('/admin/notifications/broadcast', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async sendUserPushNotification(userId, data) {
+    return apiRequest(`/admin/notifications/user/${encodeURIComponent(userId)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

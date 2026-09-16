@@ -30,11 +30,16 @@ export function NotificationsPage() {
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [successToast, setSuccessToast] = useState('');
 
+  // Target mode & user search state
+  const [targetMode, setTargetMode] = useState('all'); // 'all' | 'user'
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+
   // Form state
   const [formData, setFormData] = useState({
     type: 'Daily Reminder',
-    recipients: 'All Users',
-    selectedUser: '',
     title: '',
     message: '',
   });
@@ -62,6 +67,31 @@ export function NotificationsPage() {
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
+
+  // Debounced user search when typing in Specific User mode
+  useEffect(() => {
+    if (targetMode !== 'user' || selectedUser || !userSearchQuery.trim()) {
+      setUserSearchResults([]);
+      setIsSearchingUsers(false);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    const timer = setTimeout(() => {
+      api.searchUsers(userSearchQuery.trim(), 10)
+        .then((res) => {
+          setUserSearchResults(res.users || []);
+        })
+        .catch(() => {
+          setUserSearchResults([]);
+        })
+        .finally(() => {
+          setIsSearchingUsers(false);
+        });
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [userSearchQuery, targetMode, selectedUser]);
 
   // Keyboard accessibility: Close modals on Escape key
   useEffect(() => {
@@ -98,11 +128,13 @@ export function NotificationsPage() {
   const handleOpenSendModal = () => {
     setFormData({
       type: 'Daily Reminder',
-      recipients: 'All Users',
-      selectedUser: '',
       title: '',
       message: '',
     });
+    setTargetMode('all');
+    setSelectedUser(null);
+    setUserSearchQuery('');
+    setUserSearchResults([]);
     setFormError('');
     setIsSendModalOpen(true);
   };
@@ -112,9 +144,26 @@ export function NotificationsPage() {
     setFormError('');
   };
 
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+    setFormError('');
+  };
+
+  const handleRemoveSelectedUser = () => {
+    setSelectedUser(null);
+    setUserSearchQuery('');
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
+
+    if (targetMode === 'user' && !selectedUser) {
+      setFormError('Please select a specific user to send this notification to.');
+      return;
+    }
 
     if (!formData.title.trim()) {
       setFormError('Please enter a notification title.');
@@ -122,7 +171,7 @@ export function NotificationsPage() {
     }
 
     if (!formData.message.trim()) {
-      setFormError('Please enter a notification message.');
+      setFormError('Please enter a notification message body.');
       return;
     }
 
@@ -130,21 +179,46 @@ export function NotificationsPage() {
 
     try {
       const category = CATEGORY_MAP[formData.type] || 'announcement';
-      const response = await api.sendBroadcastNotification({
-        title: formData.title.trim(),
-        body: formData.message.trim(),
-        category,
-      });
 
-      setIsSendModalOpen(false);
-      setSuccessToast(response.message || 'Push notification dispatched successfully to all subscribed devices!');
+      if (targetMode === 'user') {
+        // Dispatch to specific user's registered devices
+        const response = await api.sendUserPushNotification(selectedUser.id, {
+          title: formData.title.trim(),
+          message: formData.message.trim(),
+          category,
+          type: category,
+        });
+
+        setIsSendModalOpen(false);
+        const recipientName = selectedUser.name || selectedUser.email || 'user';
+        setSuccessToast(response.message || `Notification sent successfully to ${recipientName}.`);
+      } else {
+        // Dispatch to all users via FCM topic broadcast
+        const response = await api.sendBroadcastNotification({
+          title: formData.title.trim(),
+          body: formData.message.trim(),
+          category,
+        });
+
+        setIsSendModalOpen(false);
+        setSuccessToast(response.message || 'Push notification dispatched successfully to all subscribed devices!');
+      }
+
       fetchNotifications();
 
       setTimeout(() => {
         setSuccessToast('');
       }, 5000);
     } catch (err) {
-      setFormError(err.message || 'Failed to dispatch notification to Firebase.');
+      // Clean handling for no-token case vs general errors
+      if (
+        err.noToken ||
+        (err.message && err.message.toLowerCase().includes('no registered active device tokens'))
+      ) {
+        setFormError('This user has no registered mobile device for push notifications.');
+      } else {
+        setFormError(err.message || 'Failed to dispatch notification.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -300,6 +374,7 @@ export function NotificationsPage() {
             <option value="Evening Reminder">Evening Reminder</option>
             <option value="Achievement">Achievement</option>
             <option value="System Notification">System Notification</option>
+            <option value="Direct Message">Direct Message</option>
             <option value="motivation">Motivation</option>
             <option value="announcement">Announcement</option>
           </select>
@@ -476,7 +551,7 @@ export function NotificationsPage() {
         <div className="modal-backdrop" onClick={handleCloseSendModal}>
           <div
             className="modal-content fade-in"
-            style={{ maxWidth: '560px' }}
+            style={{ maxWidth: '580px' }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -490,7 +565,7 @@ export function NotificationsPage() {
               ✕
             </button>
 
-            <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1rem' }}>
+            <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1rem' }}>
               <h2
                 id="send-modal-title"
                 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px' }}
@@ -498,13 +573,281 @@ export function NotificationsPage() {
                 Send Notification
               </h2>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-                Broadcast a real push notification via Firebase Cloud Messaging (FCM).
+                Dispatch a push notification via Firebase Cloud Messaging (FCM).
               </p>
             </div>
 
             {formError && <div className="error-alert" role="alert">{formError}</div>}
 
             <form onSubmit={handleFormSubmit}>
+              {/* Send To Selector */}
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Send To</label>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '0.75rem',
+                    background: 'var(--bg-input)',
+                    padding: '0.35rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(226, 232, 240, 0.85)',
+                    boxShadow: 'var(--neu-shadow-inset)',
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.55rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: targetMode === 'all' ? 700 : 500,
+                      color: targetMode === 'all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      background: targetMode === 'all' ? '#ffffff' : 'transparent',
+                      boxShadow: targetMode === 'all' ? 'var(--neu-shadow-btn)' : 'none',
+                      border: targetMode === 'all' ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid transparent',
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="targetMode"
+                      value="all"
+                      checked={targetMode === 'all'}
+                      onChange={() => {
+                        setTargetMode('all');
+                        setFormError('');
+                      }}
+                      style={{ accentColor: 'var(--accent-primary)' }}
+                    />
+                    <span>👥 All Users</span>
+                  </label>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      padding: '0.55rem 0.85rem',
+                      borderRadius: 'var(--radius-sm)',
+                      cursor: 'pointer',
+                      fontSize: '0.85rem',
+                      fontWeight: targetMode === 'user' ? 700 : 500,
+                      color: targetMode === 'user' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      background: targetMode === 'user' ? '#ffffff' : 'transparent',
+                      boxShadow: targetMode === 'user' ? 'var(--neu-shadow-btn)' : 'none',
+                      border: targetMode === 'user' ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid transparent',
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="targetMode"
+                      value="user"
+                      checked={targetMode === 'user'}
+                      onChange={() => {
+                        setTargetMode('user');
+                        setFormError('');
+                      }}
+                      style={{ accentColor: 'var(--accent-primary)' }}
+                    />
+                    <span>👤 Specific User</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Specific User Search / Selection Field */}
+              {targetMode === 'user' && (
+                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label className="form-label" htmlFor="user-search-input">
+                    Select User <span style={{ color: 'var(--accent-danger)' }}>*</span>
+                  </label>
+
+                  {selectedUser ? (
+                    <div
+                      className="neu-inset-tile"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem 1rem',
+                        background: '#ffffff',
+                        border: '1px solid rgba(79, 70, 229, 0.25)',
+                        boxShadow: 'var(--neu-shadow-btn)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div
+                          className="avatar"
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            fontSize: '0.9rem',
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
+                          }}
+                        >
+                          {selectedUser.name ? selectedUser.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                              {selectedUser.name || 'Anonymous User'}
+                            </span>
+                            {selectedUser.username && (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                @{selectedUser.username}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            {selectedUser.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="pagination-btn"
+                        onClick={handleRemoveSelectedUser}
+                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="user-search-input"
+                        type="text"
+                        className="form-input"
+                        placeholder="🔍 Search user by name, @username, or email..."
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        autoFocus
+                      />
+
+                      {/* Search Loading Indicator */}
+                      {isSearchingUsers && (
+                        <div
+                          style={{
+                            fontSize: '0.78rem',
+                            color: 'var(--text-muted)',
+                            padding: '0.4rem 0.5rem',
+                            marginTop: '0.2rem',
+                          }}
+                        >
+                          Searching users...
+                        </div>
+                      )}
+
+                      {/* Search Results Dropdown */}
+                      {userSearchResults.length > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 4px)',
+                            left: 0,
+                            right: 0,
+                            background: '#ffffff',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid rgba(226, 232, 240, 0.9)',
+                            boxShadow: 'var(--shadow-modal)',
+                            maxHeight: '220px',
+                            overflowY: 'auto',
+                            zIndex: 50,
+                            padding: '0.35rem',
+                          }}
+                        >
+                          {userSearchResults.map((u) => (
+                            <div
+                              key={u.id}
+                              onClick={() => handleSelectUser(u)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                transition: 'background 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--accent-primary-light)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              <div
+                                className="avatar"
+                                style={{
+                                  width: '28px',
+                                  height: '28px',
+                                  fontSize: '0.75rem',
+                                  minWidth: '28px',
+                                }}
+                              >
+                                {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <span
+                                    style={{
+                                      fontWeight: 700,
+                                      color: 'var(--text-main)',
+                                      fontSize: '0.84rem',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {u.name || 'Anonymous User'}
+                                  </span>
+                                  {u.username && (
+                                    <span style={{ fontSize: '0.74rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                      @{u.username}
+                                    </span>
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: '0.74rem',
+                                    color: 'var(--text-muted)',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {u.email}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {userSearchQuery.trim() && !isSearchingUsers && userSearchResults.length === 0 && (
+                        <div
+                          style={{
+                            fontSize: '0.78rem',
+                            color: 'var(--text-muted)',
+                            padding: '0.45rem 0.5rem',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          No users found matching "{userSearchQuery}".
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Notification Type / Category */}
               <div className="form-group">
                 <label className="form-label" htmlFor="notif-type">
@@ -521,21 +864,6 @@ export function NotificationsPage() {
                   <option value="Achievement">Achievement (Streak)</option>
                   <option value="System Notification">System Notification (Announcement)</option>
                   <option value="Evening Reminder">Evening Reminder (Habit Tip)</option>
-                </select>
-              </div>
-
-              {/* Recipients */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="notif-recipients">
-                  Audience
-                </label>
-                <select
-                  id="notif-recipients"
-                  className="form-input"
-                  value={formData.recipients}
-                  onChange={(e) => setFormData({ ...formData, recipients: e.target.value })}
-                >
-                  <option value="All Users">All Users (all-users topic)</option>
                 </select>
               </div>
 
