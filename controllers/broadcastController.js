@@ -89,7 +89,7 @@ async function sendBroadcast(req, res) {
       console.warn('[sendBroadcast] Could not log failure to broadcast_deliveries:', dbErr.message);
     }
 
-    return res.status(502).json({ error: error.message || 'Failed to send broadcast notification.' });
+    return res.status(502).json({ error: 'Failed to send broadcast notification.' });
   }
 }
 

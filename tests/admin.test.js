@@ -268,5 +268,30 @@ describe('Admin Dashboard API Suite', () => {
       assert.ok(body.summary.by_type);
       assert.ok(Array.isArray(body.daily));
     });
+
+    test('20. GET /admin/notifications unauthenticated returns 401', async () => {
+      const res = await authFetch('/admin/notifications');
+      assert.equal(res.status, 401);
+    });
+
+    test('21. GET /admin/notifications as regular user returns 403', async () => {
+      const res = await authFetch('/admin/notifications', {}, regularUser.accessToken);
+      assert.equal(res.status, 403);
+    });
+
+    test('22. GET /admin/notifications as admin returns 200 with stats and pagination', async () => {
+      const res = await authFetch('/admin/notifications?page=1&limit=20', {}, adminUser.accessToken);
+      const body = await res.json();
+
+      assert.equal(res.status, 200);
+      assert.ok(Array.isArray(body.notifications));
+      assert.ok(body.stats);
+      assert.equal(typeof body.stats.total, 'number');
+      assert.equal(typeof body.stats.sent, 'number');
+      assert.equal(typeof body.stats.failed, 'number');
+      assert.equal(typeof body.stats.pending, 'number');
+      assert.ok(body.pagination);
+      assert.equal(body.pagination.page, 1);
+    });
   });
 });
