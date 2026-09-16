@@ -5,6 +5,7 @@ export function Sidebar({ currentTab, setCurrentTab, isCollapsed, isMobileOpen, 
     { id: 'dashboard', label: 'Overview', icon: '📊' },
     { id: 'users', label: 'Users', icon: '👥' },
     { id: 'activity', label: 'Activity', icon: '⚡' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'analytics', label: 'Analytics', icon: '📈' },
     { id: 'experiments', label: 'Experiments', icon: '🧪' },
   ];

@@ -8,6 +8,7 @@ import { UsersPage } from './pages/UsersPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { ExperimentsPage } from './pages/ExperimentsPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import './App.css';
 
 function MainLayout() {
@@ -36,6 +37,8 @@ function MainLayout() {
         return <UsersPage />;
       case 'activity':
         return <ActivityPage />;
+      case 'notifications':
+        return <NotificationsPage />;
       case 'analytics':
         return <AnalyticsPage />;
       case 'experiments':
@@ -50,6 +53,7 @@ function MainLayout() {
       case 'dashboard': return 'Overview & Metrics';
       case 'users': return 'User Directory';
       case 'activity': return 'Audit Activity Feed';
+      case 'notifications': return 'Notifications';
       case 'analytics': return 'Usage Analytics & Trends';
       case 'experiments': return 'A/B Experiments';
       default: return 'HabitUp Dashboard';
