@@ -1,56 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { KPICard } from '../components/KPICard';
 
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: 'notif-1',
-    title: "Don't break your streak!",
-    message: 'Keep up your habit streak by logging your daily progress today!',
-    type: 'Daily Reminder',
-    recipient: 'All Users',
-    recipientType: 'all',
-    status: 'Sent',
-    sentAt: 'Today, 8:00 AM',
-    timestamp: new Date().setHours(8, 0, 0, 0),
-  },
-  {
-    id: 'notif-2',
-    title: 'You have a new friend request',
-    message: 'Chetan wants to connect with you on HabitUp.',
-    type: 'Friend Request',
-    recipient: 'Samarth',
-    recipientType: 'single',
-    status: 'Sent',
-    sentAt: 'Today, 10:15 AM',
-    timestamp: new Date().setHours(10, 15, 0, 0),
-  },
-  {
-    id: 'notif-3',
-    title: 'Chetan nudged you',
-    message: 'Friendly reminder to complete your morning routine habit.',
-    type: 'Friend Nudge',
-    recipient: 'Samarth',
-    recipientType: 'single',
-    status: 'Failed',
-    sentAt: 'Today, 11:30 AM',
-    timestamp: new Date().setHours(11, 30, 0, 0),
-    errorReason: 'FCM token expired or target device unreachable',
-  },
-  {
-    id: 'notif-4',
-    title: 'Complete your habits',
-    message: 'You still have 2 incomplete habits before the day ends.',
-    type: 'Evening Reminder',
-    recipient: 'Ayush',
-    recipientType: 'single',
-    status: 'Pending',
-    sentAt: 'Today, 7:00 PM',
-    timestamp: new Date().setHours(19, 0, 0, 0),
-  },
-];
-
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -363,7 +315,9 @@ export function NotificationsPage() {
             {filteredNotifications.length === 0 ? (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  No notifications match the selected search or filters.
+                  {notifications.length === 0
+                    ? 'No notifications sent yet. Click "+ Send Notification" to create a notification.'
+                    : 'No notifications match the selected search or filters.'}
                 </td>
               </tr>
             ) : (
