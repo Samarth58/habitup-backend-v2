@@ -82,9 +82,15 @@ async function getUserProfile(req, res) {
   }
 }
 
+const {
+  getUserLanguagePreference,
+  updateUserLanguage,
+} = require('../services/userLanguageService');
+const { SUPPORTED_LANGUAGES } = require('../constants/languages');
+
 /**
  * GET /auth/me or GET /users/me or getAuthUserProfile
- * Fetches authenticated user's profile with username.
+ * Fetches authenticated user's profile with username and preferred_language.
  */
 async function getAuthUserProfile(req, res) {
   const userId = req.userId || req.user?.sub;
@@ -94,7 +100,7 @@ async function getAuthUserProfile(req, res) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT id, email, username, created_at
+      `SELECT id, email, username, preferred_language, created_at
        FROM users
        WHERE id = $1 AND deleted_at IS NULL`,
       [userId]
@@ -112,9 +118,67 @@ async function getAuthUserProfile(req, res) {
   }
 }
 
+/**
+ * GET /users/preferences/language
+ * Returns the authenticated user's preferred language.
+ */
+async function getUserLanguage(req, res) {
+  const userId = req.userId || req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  try {
+    const result = await getUserLanguagePreference(userId);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error('[getUserLanguage]', err);
+    return res.status(500).json({ error: 'Failed to fetch language preference.' });
+  }
+}
+
+/**
+ * PUT /users/preferences/language
+ * Updates the authenticated user's preferred language and synchronizes FCM topics.
+ */
+async function updateUserLanguagePreference(req, res) {
+  const userId = req.userId || req.user?.sub;
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized.' });
+  }
+
+  const { language } = req.body || {};
+  if (!language) {
+    return res.status(400).json({
+      error: 'Language is required',
+      supportedLanguages: SUPPORTED_LANGUAGES,
+    });
+  }
+
+  try {
+    const result = await updateUserLanguage(userId, language);
+    return res.status(200).json(result);
+  } catch (err) {
+    if (err.status === 400) {
+      return res.status(400).json({
+        error: err.message || 'Unsupported language',
+        supportedLanguages: err.supportedLanguages || SUPPORTED_LANGUAGES,
+      });
+    }
+    if (err.status === 404) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    console.error('[updateUserLanguagePreference]', err);
+    return res.status(500).json({ error: 'Failed to update language preference.' });
+  }
+}
+
 module.exports = {
   registerWithUsername,
   searchUsers,
   getUserProfile,
   getAuthUserProfile,
+  getUserLanguage,
+  updateUserLanguagePreference,
 };
+

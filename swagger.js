@@ -27,13 +27,14 @@ const options = {
         User: {
           type: 'object',
           properties: {
-            id:         { type: 'string', format: 'uuid' },
-            name:       { type: 'string', example: 'Samarth' },
-            email:      { type: 'string', format: 'email' },
-            username:   { type: 'string', example: 'samarth_58' },
-            timezone:   { type: 'string', example: 'Asia/Kolkata' },
-            created_at: { type: 'string', format: 'date-time' },
-            role:       { type: 'string', enum: ['user', 'admin'], example: 'user' },
+            id:                 { type: 'string', format: 'uuid' },
+            name:               { type: 'string', example: 'Samarth' },
+            email:              { type: 'string', format: 'email' },
+            username:           { type: 'string', example: 'samarth_58' },
+            timezone:           { type: 'string', example: 'Asia/Kolkata' },
+            preferred_language: { type: 'string', enum: ['en', 'hi', 'te', 'ta', 'kn', 'ml', 'bn', 'mr', 'gu'], example: 'en' },
+            created_at:         { type: 'string', format: 'date-time' },
+            role:               { type: 'string', enum: ['user', 'admin'], example: 'user' },
           },
         },
         Habit: {
@@ -274,6 +275,27 @@ const options = {
             eveningTime:      { type: 'string', example: '20:00' },
             timezone:         { type: 'string', description: 'Valid IANA timezone identifier (e.g. Asia/Kolkata, America/New_York, UTC)', example: 'Asia/Kolkata' },
             updatedAt:        { type: 'string', format: 'date-time' },
+          },
+        },
+        UserLanguagePreference: {
+          type: 'object',
+          properties: {
+            language: {
+              type: 'string',
+              enum: ['en', 'hi', 'te', 'ta', 'kn', 'ml', 'bn', 'mr', 'gu'],
+              example: 'en',
+            },
+          },
+        },
+        LanguageValidationError: {
+          type: 'object',
+          properties: {
+            error: { type: 'string', example: 'Unsupported language' },
+            supportedLanguages: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['en', 'hi', 'te', 'ta', 'kn', 'ml', 'bn', 'mr', 'gu'],
+            },
           },
         },
       },

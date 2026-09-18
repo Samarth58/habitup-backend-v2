@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const { TEMPLATE_POOLS } = require('./broadcastTemplates');
-const { sendTopicPushNotification, isFirebaseConfigured } = require('./notificationService');
+const notificationService = require('./notificationService');
+const { SUPPORTED_LANGUAGES } = require('../constants/languages');
 
 const ALL_USERS_TOPIC = 'all-users';
 const BROADCAST_TIMEZONE = 'Asia/Kolkata';
@@ -179,7 +180,7 @@ async function processAutomatedBroadcasts(currentTime = new Date(), timeZone = B
   }
 
   // 2. Check Firebase configuration
-  if (!isFirebaseConfigured()) {
+  if (!notificationService.isFirebaseConfigured()) {
     const missing = [];
     if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_PROJECT_ID.trim()) missing.push('FIREBASE_PROJECT_ID');
     if (!process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_CLIENT_EMAIL.trim()) missing.push('FIREBASE_CLIENT_EMAIL');
@@ -194,36 +195,50 @@ async function processAutomatedBroadcasts(currentTime = new Date(), timeZone = B
     return { attempted: true, slotKey, status: 'firebase_unconfigured' };
   }
 
-  // 3. Dispatch to FCM topic 'all-users'
-  try {
-    const fcmRes = await sendTopicPushNotification(ALL_USERS_TOPIC, {
-      title: template.title,
-      body: template.body,
-      data: {
-        type: 'engagement_broadcast',
-        audience: ALL_USERS_TOPIC,
-        category: template.category,
-        slotKey,
-      },
-    });
+  // 3. Dispatch to language topics 'all-users-<lang>' (never to legacy 'all-users' to prevent duplicates)
+  const dispatchResults = [];
+  for (const lang of SUPPORTED_LANGUAGES) {
+    const topic = `all-users-${lang}`;
+    try {
+      const fcmRes = await notificationService.sendTopicPushNotification(topic, {
+        title: template.title,
+        body: template.body,
+        data: {
+          type: 'engagement_broadcast',
+          audience: topic,
+          category: template.category,
+          slotKey,
+          language: lang,
+        },
+      });
+      dispatchResults.push({ lang, topic, success: true, messageId: fcmRes.messageId });
+    } catch (fcmErr) {
+      console.error(`[processAutomatedBroadcasts] FCM dispatch failed for ${topic}:`, fcmErr.message);
+      dispatchResults.push({ lang, topic, success: false, error: fcmErr.message });
+    }
+  }
 
+  const anySent = dispatchResults.some((r) => r.success);
+  if (anySent) {
+    const firstMsgId = dispatchResults.find((r) => r.success)?.messageId;
     await pool.query(
       `UPDATE broadcast_deliveries
        SET status = 'sent', message_id = $1, sent_at = NOW()
        WHERE id = $2`,
-      [fcmRes.messageId || null, deliveryId]
+      [firstMsgId || null, deliveryId]
     );
 
-    return { attempted: true, slotKey, status: 'sent' };
-  } catch (fcmErr) {
-    console.error('[processAutomatedBroadcasts] FCM dispatch failed:', fcmErr.message);
+    return { attempted: true, slotKey, status: 'sent', dispatches: dispatchResults };
+  } else {
+    const firstError = dispatchResults.find((r) => !r.success)?.error || 'FCM dispatch error';
     await pool.query(
       `UPDATE broadcast_deliveries
        SET status = 'failed', error_message = $1, sent_at = NOW()
        WHERE id = $2`,
-      [fcmErr.message || 'FCM dispatch error', deliveryId]
+      [firstError, deliveryId]
     );
-    return { attempted: true, slotKey, status: 'failed' };
+
+    return { attempted: true, slotKey, status: 'failed', dispatches: dispatchResults };
   }
 }
 

@@ -149,13 +149,15 @@ describe('Database Deduplication & FCM Dispatch Integration', () => {
     // 10:30 AM IST = 05:00:00 UTC
     const morningTime = new Date(`${testDate}T05:00:00.000Z`);
 
-    // First run claims slot and sends
+    // First run claims slot and sends to all 9 language topics
     const res1 = await processAutomatedBroadcasts(morningTime, 'Asia/Kolkata');
     assert.equal(res1.attempted, true);
     assert.equal(res1.slotKey, 'morning_blast');
     assert.equal(res1.status, 'sent');
-    assert.equal(sentTopicMessages.length, 1);
-    assert.equal(sentTopicMessages[0].topic, 'all-users');
+    assert.equal(sentTopicMessages.length, 9);
+    assert.ok(sentTopicMessages.some((m) => m.topic === 'all-users-en'));
+    assert.ok(sentTopicMessages.some((m) => m.topic === 'all-users-kn'));
+    assert.ok(!sentTopicMessages.some((m) => m.topic === 'all-users'), 'Must not send to legacy all-users');
     assert.equal(sentTopicMessages[0].data.type, 'engagement_broadcast');
 
     // Second run within the same minute or tick should be rejected by DB constraint
@@ -163,7 +165,7 @@ describe('Database Deduplication & FCM Dispatch Integration', () => {
     assert.equal(res2.attempted, false);
     assert.equal(res2.status, 'already_claimed');
     // FCM must NOT have been called a second time
-    assert.equal(sentTopicMessages.length, 1);
+    assert.equal(sentTopicMessages.length, 9);
 
     // Verify DB record status is 'sent'
     const { rows } = await pool.query(

@@ -76,7 +76,7 @@ function getLocalDateTime(date, timeZone) {
  * @param {string} timezone
  * @param {object} summary - Mutable result summary counter
  */
-async function processSingleNotification(userId, notificationType, localDate, localTime, timezone, summary) {
+async function processSingleNotification(userId, notificationType, localDate, localTime, timezone, summary, preferredLanguage = null) {
   let deliveryId = null;
 
   try {
@@ -137,10 +137,10 @@ async function processSingleNotification(userId, notificationType, localDate, lo
     return;
   }
 
-  // Compute personalized notification content based on user's actual habit progress.
+  // Compute personalized notification content based on user's actual habit progress and preferred language.
   // Falls back to a generic message automatically on any error, so one user's failure
   // cannot stop the scheduler.
-  const { title, body, data } = await getPersonalizedContent(userId, notificationType, localDate, timezone);
+  const { title, body, data } = await getPersonalizedContent(userId, notificationType, localDate, timezone, preferredLanguage);
 
   let anySent = false;
   let lastError = null;
@@ -215,6 +215,7 @@ async function processScheduledNotifications(currentTime = new Date()) {
     const { rows: userPrefs } = await pool.query(`
       SELECT 
         u.id AS user_id,
+        COALESCE(u.preferred_language, 'en') AS preferred_language,
         COALESCE(np.push_enabled, true) AS push_enabled,
         COALESCE(np.morning_enabled, true) AS morning_enabled,
         COALESCE(np.afternoon_enabled, true) AS afternoon_enabled,
@@ -253,7 +254,7 @@ async function processScheduledNotifications(currentTime = new Date()) {
 
       for (const type of dueTypes) {
         summary.dueNotifications++;
-        await processSingleNotification(pref.user_id, type, localDate, localTime, tz, summary);
+        await processSingleNotification(pref.user_id, type, localDate, localTime, tz, summary, pref.preferred_language);
       }
     }
 

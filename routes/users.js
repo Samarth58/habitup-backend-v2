@@ -4,11 +4,84 @@ const {
   searchUsers,
   getUserProfile,
   getAuthUserProfile,
+  getUserLanguage,
+  updateUserLanguagePreference,
 } = require('../controllers/usernameController');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { searchLimiter, authLimiter } = require('../middleware/rateLimiter');
 
 const router = Router();
+
+/**
+ * @swagger
+ * /users/preferences/language:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get authenticated user's preferred language
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User's preferred language code
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 language:
+ *                   type: string
+ *                   enum: [en, hi, te, ta, kn, ml, bn, mr, gu]
+ *                   example: en
+ *       401:
+ *         description: Unauthorized
+ *   put:
+ *     tags: [Users]
+ *     summary: Update authenticated user's preferred language
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [language]
+ *             properties:
+ *               language:
+ *                 type: string
+ *                 enum: [en, hi, te, ta, kn, ml, bn, mr, gu]
+ *                 example: kn
+ *     responses:
+ *       200:
+ *         description: Preferred language updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 language:
+ *                   type: string
+ *                   example: kn
+ *       400:
+ *         description: Unsupported or missing language
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unsupported language
+ *                 supportedLanguages:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                   example: [en, hi, te, ta, kn, ml, bn, mr, gu]
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/preferences/language', requireAuth, getUserLanguage);
+router.put('/preferences/language', requireAuth, updateUserLanguagePreference);
 
 /**
  * @swagger

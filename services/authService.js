@@ -125,14 +125,14 @@ async function sendPasswordResetEmail(toEmail, rawToken) {
  * @param {{ name: string, email: string, username: string, password: string, timezone: string, role?: string }} param0
  * @returns {Promise<object>} The created user row (without password_hash).
  */
-async function createUser({ name, email, username, password, timezone, role = 'user' }) {
+async function createUser({ name, email, username, password, timezone, role = 'user', preferred_language = 'en' }) {
   const password_hash = await argon2.hash(password);
   const lowerUsername = username.toLowerCase().trim();
   const { rows } = await pool.query(
-    `INSERT INTO users (name, email, username, password_hash, timezone, role)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, name, email, username, role, timezone, created_at`,
-    [name, email, lowerUsername, password_hash, timezone, role]
+    `INSERT INTO users (name, email, username, password_hash, timezone, role, preferred_language)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, name, email, username, role, timezone, preferred_language, created_at`,
+    [name, email, lowerUsername, password_hash, timezone, role, preferred_language || 'en']
   );
   const user = rows[0];
 
@@ -162,7 +162,7 @@ async function createUser({ name, email, username, password, timezone, role = 'u
  */
 async function findUserByEmail(email) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, username, role, password_hash, timezone, created_at
+    `SELECT id, name, email, username, role, preferred_language, password_hash, timezone, created_at
      FROM users
      WHERE email = $1 AND deleted_at IS NULL`,
     [email]
@@ -179,7 +179,7 @@ async function findUserByEmailOrUsername(identifier) {
   if (!identifier) return null;
   const cleanIdentifier = identifier.trim();
   const { rows } = await pool.query(
-    `SELECT id, name, email, username, role, password_hash, timezone, created_at
+    `SELECT id, name, email, username, role, preferred_language, password_hash, timezone, created_at
      FROM users
      WHERE (email = $1 OR LOWER(username) = LOWER($1)) AND deleted_at IS NULL`,
     [cleanIdentifier]
@@ -267,7 +267,7 @@ async function revokeAllSessionsForUser(userId) {
  */
 async function findUserById(userId) {
   const { rows } = await pool.query(
-    `SELECT id, name, email, username, role, timezone, created_at
+    `SELECT id, name, email, username, role, preferred_language, timezone, created_at
      FROM users
      WHERE id = $1 AND deleted_at IS NULL`,
     [userId]

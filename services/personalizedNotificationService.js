@@ -1,4 +1,6 @@
 const { pool } = require('./db');
+const { getLocalizedNotification, translate } = require('./translationService');
+const { getUserNotificationLanguage } = require('./userLanguageService');
 
 /**
  * Generic fallback templates used when personalization cannot be computed.
@@ -40,9 +42,6 @@ function getDayOfWeekFromDateStr(localDate) {
  *   - AND its frequency_type is 'daily'
  *   - OR its frequency_type is 'scheduled' AND it has a habit_schedule row whose
  *     day_of_week matches the weekday of localDate.
- *
- * Uses two targeted SQL queries to avoid N+1 patterns and to handle the
- * LEFT JOIN fan-out that occurs when a habit has multiple schedule rows.
  *
  * @param {string} userId
  * @param {string} localDate "YYYY-MM-DD"
@@ -111,20 +110,19 @@ async function getHabitProgressForDate(userId, localDate) {
  * Builds the notification title and body for a morning notification.
  *
  * @param {number} planned
+ * @param {string} [lang='en']
  * @returns {{ title: string, body: string }}
  */
-function buildMorningContent(planned) {
-  const title = 'Good morning! 🌅';
-
+function buildMorningContent(planned, lang = 'en') {
   if (planned === 0) {
-    return { title, body: 'No habits scheduled for today. Enjoy your day!' };
+    return getLocalizedNotification('personalized_morning_zero', lang);
   }
 
   if (planned === 1) {
-    return { title, body: 'You have 1 habit planned today. You\'ve got this!' };
+    return getLocalizedNotification('personalized_morning_one', lang, { count: 1 });
   }
 
-  return { title, body: `You have ${planned} habits planned today. Let\'s get started!` };
+  return getLocalizedNotification('personalized_morning_multiple', lang, { count: planned });
 }
 
 /**
@@ -132,34 +130,32 @@ function buildMorningContent(planned) {
  *
  * @param {number} planned
  * @param {number} completed
+ * @param {string} [lang='en']
  * @returns {{ title: string, body: string }}
  */
-function buildAfternoonContent(planned, completed) {
+function buildAfternoonContent(planned, completed, lang = 'en') {
   if (planned === 0) {
-    return {
-      title: 'HabitUp Check-in',
-      body: 'No habits scheduled for today. Enjoy the rest of your day!',
-    };
+    return getLocalizedNotification('personalized_afternoon_zero', lang);
   }
 
   if (completed >= planned) {
-    return {
-      title: 'HabitUp Check-in 🎉',
-      body: `Amazing! You've completed all ${planned} habit${planned === 1 ? '' : 's'} today!`,
-    };
+    if (planned === 1) {
+      return getLocalizedNotification('personalized_afternoon_all_one', lang, { count: 1 });
+    }
+    return getLocalizedNotification('personalized_afternoon_all_multiple', lang, { count: planned });
   }
 
   if (completed === 0) {
-    return {
-      title: 'HabitUp Check-in',
-      body: `You have ${planned} habit${planned === 1 ? '' : 's'} waiting today. Start with one!`,
-    };
+    if (planned === 1) {
+      return getLocalizedNotification('personalized_afternoon_none_one', lang, { count: 1 });
+    }
+    return getLocalizedNotification('personalized_afternoon_none_multiple', lang, { count: planned });
   }
 
-  return {
-    title: 'HabitUp Check-in 💪',
-    body: `You've completed ${completed} of ${planned} habits today. Keep going!`,
-  };
+  return getLocalizedNotification('personalized_afternoon_partial', lang, {
+    completed,
+    total: planned,
+  });
 }
 
 /**
@@ -168,46 +164,52 @@ function buildAfternoonContent(planned, completed) {
  * @param {number} planned
  * @param {number} completed
  * @param {number} remaining
+ * @param {string} [lang='en']
  * @returns {{ title: string, body: string }}
  */
-function buildEveningContent(planned, completed, remaining) {
-  const title = 'Evening check-in 🌙';
-
+function buildEveningContent(planned, completed, remaining, lang = 'en') {
   if (planned === 0) {
-    return { title, body: 'No habits scheduled today. Rest well!' };
+    return getLocalizedNotification('personalized_evening_zero', lang);
   }
 
   if (remaining === 0) {
-    return {
-      title,
-      body: `Great job! You completed all ${planned} habit${planned === 1 ? '' : 's'} today! 🎉`,
-    };
+    if (planned === 1) {
+      return getLocalizedNotification('personalized_evening_all_one', lang, { count: 1 });
+    }
+    return getLocalizedNotification('personalized_evening_all_multiple', lang, { count: planned });
   }
 
   if (remaining === 1) {
-    return { title, body: 'You\'re almost there! Just 1 habit left today. 🔥' };
+    return getLocalizedNotification('personalized_evening_one_left', lang, { count: 1 });
   }
 
-  return { title, body: `You still have ${remaining} habits left today. There\'s still time!` };
+  return getLocalizedNotification('personalized_evening_multiple_left', lang, { count: remaining });
 }
 
 /**
  * Computes personalized notification content for a user based on their actual
- * habit progress for the given local date.
+ * habit progress for the given local date and their preferred language.
  *
  * Returns a notification object `{ title, body, data }` ready for FCM dispatch.
  * Does NOT send FCM; that remains the responsibility of notificationSchedulerService.
  *
- * On any error, logs safely and returns the generic fallback template so that one
- * user's failure does not stop the scheduler.
+ * On any error, logs safely and returns the generic fallback template in the user's
+ * preferred language (or English).
  *
  * @param {string} userId
  * @param {'morning'|'afternoon'|'evening'} notificationType
  * @param {string} localDate "YYYY-MM-DD" — the user's local calendar date for this notification
- * @param {string} [timezone='UTC'] — IANA timezone (used for data payload only, conversion already done by scheduler)
+ * @param {string} [timezone='UTC'] — IANA timezone
+ * @param {string} [preferredLanguage] — Optional pre-fetched language code
  * @returns {Promise<{ title: string, body: string, data: Record<string,string> }>}
  */
-async function getPersonalizedContent(userId, notificationType, localDate, timezone = 'UTC') {
+async function getPersonalizedContent(userId, notificationType, localDate, timezone = 'UTC', preferredLanguage = null) {
+  let userLang = preferredLanguage;
+  if (!userLang && userId) {
+    userLang = await getUserNotificationLanguage(userId);
+  }
+  userLang = userLang || 'en';
+
   try {
     const { planned, completed, remaining } = await getHabitProgressForDate(userId, localDate);
 
@@ -215,13 +217,12 @@ async function getPersonalizedContent(userId, notificationType, localDate, timez
     let body;
 
     if (notificationType === 'morning') {
-      ({ title, body } = buildMorningContent(planned));
+      ({ title, body } = buildMorningContent(planned, userLang));
     } else if (notificationType === 'afternoon') {
-      ({ title, body } = buildAfternoonContent(planned, completed));
+      ({ title, body } = buildAfternoonContent(planned, completed, userLang));
     } else if (notificationType === 'evening') {
-      ({ title, body } = buildEveningContent(planned, completed, remaining));
+      ({ title, body } = buildEveningContent(planned, completed, remaining, userLang));
     } else {
-      // Unknown type: fall through to fallback
       throw new Error(`Unknown notification type: ${notificationType}`);
     }
 
@@ -241,12 +242,10 @@ async function getPersonalizedContent(userId, notificationType, localDate, timez
       err.message
     );
 
-    const fallback = FALLBACK_TEMPLATES[notificationType] || {
-      title: 'HabitUp Reminder',
-      body: 'Check in on your habits today.',
-    };
+    const title = translate(`${notificationType}_reminder_title`, userLang) || FALLBACK_TEMPLATES[notificationType]?.title || 'HabitUp Reminder';
+    const body = translate(`${notificationType}_reminder_body`, userLang) || FALLBACK_TEMPLATES[notificationType]?.body || 'Check in on your habits today.';
 
-    return { title: fallback.title, body: fallback.body, data: undefined };
+    return { title, body, data: undefined };
   }
 }
 

@@ -34,11 +34,24 @@ async function upsertDeviceToken(userId, { token, platform, timezone = 'UTC' }) 
   // Ensure default notification preferences exist for this user without overwriting existing settings
   await ensureNotificationPreferences(userId, timezone);
 
-  // Subscribe the token to the 'all-users' FCM topic so broadcast notifications reach this device.
+  // Subscribe the token to 'all-users' and 'all-users-<lang>' FCM topics so broadcast notifications reach this device.
   // Wrapped in try/catch: a subscription failure must never break device-token registration.
   if (firebaseService.isFirebaseConfigured()) {
     try {
       await firebaseService.subscribeTokenToTopic(token, 'all-users');
+
+      let userLang = 'en';
+      try {
+        const { rows: uRows } = await pool.query(
+          `SELECT preferred_language FROM users WHERE id = $1 AND deleted_at IS NULL`,
+          [userId]
+        );
+        if (uRows.length > 0 && uRows[0].preferred_language) {
+          userLang = uRows[0].preferred_language;
+        }
+      } catch (_) {}
+
+      await firebaseService.subscribeTokenToTopic(token, `all-users-${userLang}`);
     } catch (err) {
       console.error(
         '[upsertDeviceToken] Topic subscription failed (registration still succeeded):',

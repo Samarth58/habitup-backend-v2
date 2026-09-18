@@ -11,6 +11,8 @@ const { calculateStreak } = require('./streakService');
 const { logActivity } = require('./activityService');
 const { getDeviceTokensByUserId, deleteDeviceToken } = require('./deviceTokenService');
 const notificationService = require('./notificationService');
+const { getLocalizedNotification } = require('./translationService');
+const { getUserNotificationLanguage } = require('./userLanguageService');
 
 function serviceError(message, status) {
   const error = new Error(message);
@@ -89,8 +91,11 @@ async function sendFriendRequest(requesterId, recipientUsername) {
         const requester = requesterRows[0];
         const requesterName = requester?.name || requester?.username || 'Someone';
 
-        const title = 'New Friend Request';
-        const body = `${requesterName} sent you a friend request.`;
+        const recipientLang = await getUserNotificationLanguage(recipient.id);
+        const { title, body } = getLocalizedNotification('friend_request', recipientLang, {
+          name: requesterName,
+        });
+
         const data = {
           type: 'friend_request',
           requestId: String(result.rows[0].request_id),
@@ -186,6 +191,41 @@ async function acceptFriendRequest(requestId, userId) {
       friendship_id: friendshipRows[0].friendship_id,
       requester_id: request.requester_id,
     }).catch((err) => console.error('[acceptFriendRequest activity]', err));
+
+    if (notificationService.isFirebaseConfigured()) {
+      try {
+        const tokens = await getDeviceTokensByUserId(request.requester_id);
+        if (tokens.length > 0) {
+          const { rows: acceptingUserRows } = await pool.query(
+            `SELECT name, username FROM users WHERE id = $1 AND deleted_at IS NULL`,
+            [userId]
+          );
+          const acceptingUser = acceptingUserRows[0];
+          const acceptingUserName = acceptingUser?.name || acceptingUser?.username || 'Someone';
+
+          const requesterLang = await getUserNotificationLanguage(request.requester_id);
+          const { title, body } = getLocalizedNotification('friend_request_accepted', requesterLang, {
+            name: acceptingUserName,
+          });
+
+          const data = {
+            type: 'friend_request_accepted',
+            requestId: String(requestId),
+            acceptingUserId: String(userId),
+          };
+
+          await Promise.allSettled(
+            tokens.map(async ({ token }) => {
+              try {
+                return await notificationService.sendPushNotification(token, { title, body, data });
+              } catch (_) {}
+            })
+          );
+        }
+      } catch (notifyErr) {
+        console.error('[acceptFriendRequest notification] Non-blocking notification error:', notifyErr.message);
+      }
+    }
 
     return friendshipRows[0];
   } catch (error) {
@@ -294,11 +334,20 @@ async function sendNudge(senderId, friendId, habitName = '') {
   }
 
   const cleanHabitName = habitName || '';
-  const body = cleanHabitName
-    ? `${sender.name || sender.username} nudged you to complete your ${cleanHabitName}`
-    : `${sender.name || sender.username} sent you a habit nudge`;
+  const recipientLang = await getUserNotificationLanguage(friendId);
+  const senderName = sender.name || sender.username || 'Someone';
+
+  const { title, body } = cleanHabitName
+    ? getLocalizedNotification('friend_nudge_habit', recipientLang, {
+        name: senderName,
+        habitName: cleanHabitName,
+      })
+    : getLocalizedNotification('friend_nudge_general', recipientLang, {
+        name: senderName,
+      });
+
   const results = await Promise.allSettled(tokens.map(({ token }) => notificationService.sendPushNotification(token, {
-    title: 'Habit Nudge 👋',
+    title,
     body,
     data: {
       type: 'friend_nudge',

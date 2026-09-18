@@ -98,9 +98,44 @@ async function subscribeTokenToTopic(token, topic) {
   }
 }
 
+/**
+ * Unsubscribes a single FCM device token from an FCM topic.
+ * Safely repeatable — unsubscribing a non-subscribed token is a no-op.
+ *
+ * @param {string} token - FCM registration token
+ * @param {string} topic - FCM topic name (e.g. 'all-users-en')
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+async function unsubscribeTokenFromTopic(token, topic) {
+  const messaging = getFirebaseMessaging();
+  try {
+    const response = await messaging.unsubscribeFromTopic([token], topic);
+
+    if (response.failureCount > 0) {
+      const errorInfo = response.errors && response.errors[0];
+      const errorCode = errorInfo && errorInfo.error && errorInfo.error.code;
+      console.error(
+        `[unsubscribeTokenFromTopic] Failed to unsubscribe token from topic "${topic}":`,
+        errorCode || (errorInfo && errorInfo.error && errorInfo.error.message) || 'unknown error'
+      );
+      return { success: false, error: errorCode };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error(
+      `[unsubscribeTokenFromTopic] Error unsubscribing token from topic "${topic}":`,
+      err.code || err.message
+    );
+    throw err;
+  }
+}
+
 module.exports = {
   isFirebaseConfigured,
   getFirebaseAdminApp,
   getFirebaseMessaging,
   subscribeTokenToTopic,
+  unsubscribeTokenFromTopic,
 };
+
