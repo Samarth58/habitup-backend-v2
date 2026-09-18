@@ -1,4 +1,17 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  Plus,
+  CheckCircle2,
+  X,
+  Bell,
+  AlertTriangle,
+  Clock,
+  Users,
+  User,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { KPICard } from '../components/KPICard';
 
@@ -279,7 +292,7 @@ export function NotificationsPage() {
             }}
             onClick={handleOpenSendModal}
           >
-            <span aria-hidden="true" style={{ fontSize: '1rem', lineHeight: 1 }}>+</span>
+            <Plus size={16} aria-hidden="true" />
             <span>Send Notification</span>
           </button>
         </div>
@@ -308,7 +321,7 @@ export function NotificationsPage() {
           role="status"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span aria-hidden="true">✓</span>
+            <CheckCircle2 size={16} aria-hidden="true" />
             <span>{successToast}</span>
           </div>
           <button
@@ -322,10 +335,12 @@ export function NotificationsPage() {
               fontSize: '0.95rem',
               cursor: 'pointer',
               padding: '0.2rem 0.4rem',
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
             aria-label="Dismiss message"
           >
-            ✕
+            <X size={14} />
           </button>
         </div>
       )}
@@ -335,28 +350,28 @@ export function NotificationsPage() {
         <KPICard
           title="TOTAL NOTIFICATIONS"
           value={stats.total}
-          icon="🔔"
+          icon={<Bell size={18} color="var(--accent-primary)" />}
           badgeText="All Time"
           badgeType="info"
         />
         <KPICard
           title="SENT"
           value={stats.sent}
-          icon="✅"
+          icon={<CheckCircle2 size={18} color="var(--accent-success)" />}
           badgeText={stats.total > 0 ? `${Math.round((stats.sent / stats.total) * 100)}% Delivered` : undefined}
           badgeType="success"
         />
         <KPICard
           title="FAILED"
           value={stats.failed}
-          icon="⚠️"
+          icon={<AlertTriangle size={18} color="var(--accent-danger)" />}
           badgeText={stats.failed > 0 ? `${stats.failed} Errors` : undefined}
           badgeType="danger"
         />
         <KPICard
           title="PENDING"
           value={stats.pending}
-          icon="⏳"
+          icon={<Clock size={18} color="var(--accent-warning)" />}
           badgeText={stats.pending > 0 ? `${stats.pending} Queued` : undefined}
           badgeType="warning"
         />
@@ -502,10 +517,13 @@ export function NotificationsPage() {
                           background: notif.recipient === 'All Users'
                             ? 'linear-gradient(135deg, var(--accent-secondary) 0%, #0284c7 100%)'
                             : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                         aria-hidden="true"
                       >
-                        {notif.recipient === 'All Users' ? '👥' : (notif.recipient ? notif.recipient.charAt(0).toUpperCase() : 'U')}
+                        {notif.recipient === 'All Users' ? <Users size={13} color="#ffffff" /> : (notif.recipient ? notif.recipient.charAt(0).toUpperCase() : 'U')}
                       </span>
                       <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.84rem' }}>
                         {notif.recipient}
@@ -547,15 +565,17 @@ export function NotificationsPage() {
               className="pagination-btn"
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
             >
-              ← Previous
+              <ChevronLeft size={16} /> Previous
             </button>
             <button
               className="pagination-btn"
               disabled={page >= pagination.totalPages || loading}
               onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
             >
-              Next →
+              Next <ChevronRight size={16} />
             </button>
           </div>
         )}
@@ -577,7 +597,7 @@ export function NotificationsPage() {
               onClick={handleCloseSendModal}
               aria-label="Close dialog"
             >
-              ✕
+              <X size={18} />
             </button>
 
             <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1rem' }}>
@@ -639,7 +659,9 @@ export function NotificationsPage() {
                       }}
                       style={{ accentColor: 'var(--accent-primary)' }}
                     />
-                    <span>👥 All Users</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Users size={15} /> All Users
+                    </span>
                   </label>
 
                   <label
@@ -671,7 +693,9 @@ export function NotificationsPage() {
                       }}
                       style={{ accentColor: 'var(--accent-primary)' }}
                     />
-                    <span>👤 Specific User</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <User size={15} /> Specific User
+                    </span>
                   </label>
                 </div>
               </div>
@@ -740,7 +764,7 @@ export function NotificationsPage() {
                         id="user-search-input"
                         type="text"
                         className="form-input"
-                        placeholder="🔍 Search user by name, @username, or email..."
+                        placeholder="Search user by name, @username, or email..."
                         value={userSearchQuery}
                         onChange={(e) => setUserSearchQuery(e.target.value)}
                         autoFocus
@@ -892,7 +916,7 @@ export function NotificationsPage() {
                   type="text"
                   maxLength={120}
                   className="form-input"
-                  placeholder="e.g. Keep Going! 🔥"
+                  placeholder="e.g. Keep Going!"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   disabled={submitting}
@@ -950,9 +974,14 @@ export function NotificationsPage() {
                     fontWeight: 700,
                     boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)',
                     minWidth: '150px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.45rem',
                   }}
                 >
-                  {submitting ? 'Sending...' : 'Send Notification'}
+                  <Send size={15} />
+                  <span>{submitting ? 'Sending...' : 'Send Notification'}</span>
                 </button>
               </div>
             </form>
@@ -976,16 +1005,24 @@ export function NotificationsPage() {
               onClick={() => setSelectedNotification(null)}
               aria-label="Close dialog"
             >
-              ✕
+              <X size={18} />
             </button>
 
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1.25rem' }}>
               <div
                 className="avatar"
-                style={{ width: '44px', height: '44px', fontSize: '1.2rem', minWidth: '44px' }}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  fontSize: '1.2rem',
+                  minWidth: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
                 aria-hidden="true"
               >
-                🔔
+                <Bell size={20} color="#ffffff" />
               </div>
               <div>
                 <h2

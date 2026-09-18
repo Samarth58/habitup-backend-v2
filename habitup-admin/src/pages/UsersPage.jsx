@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { api } from '../services/api';
 import { UserDetailModal } from '../components/UserDetailModal';
 
@@ -83,7 +84,9 @@ export function UsersPage() {
             onChange={(e) => setEmailSearch(e.target.value)}
             aria-label="Search by email or username"
           />
-          <button type="submit" className="pagination-btn" style={{ fontWeight: 700 }}>Search</button>
+          <button type="submit" className="pagination-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+            <Search size={14} /> Search
+          </button>
 
           <select
             className="select-input"
@@ -231,16 +234,18 @@ export function UsersPage() {
             className="pagination-btn"
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            ← Previous
+            <ChevronLeft size={16} /> Previous
           </button>
 
           <button
             className="pagination-btn"
             disabled={page >= pagination.totalPages || loading}
             onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            Next →
+            Next <ChevronRight size={16} />
           </button>
         </div>
       </div>

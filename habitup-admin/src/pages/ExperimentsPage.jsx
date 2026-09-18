@@ -1,4 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import {
+  FlaskConical,
+  RefreshCw,
+  TrendingUp,
+  Calculator,
+  AlertTriangle,
+  FileText,
+  BarChart3,
+  CheckCircle2,
+  Users,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { KPICard } from '../components/KPICard';
 
@@ -49,8 +60,9 @@ function SectionTitle({ icon, children }) {
     <h3 style={{
       fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem',
       color: 'var(--text-main)', letterSpacing: '-0.2px',
+      display: 'flex', alignItems: 'center', gap: '0.5rem',
     }}>
-      {icon} {children}
+      {icon} <span>{children}</span>
     </h3>
   );
 }
@@ -129,22 +141,24 @@ export function ExperimentsPage() {
   const treatmentAlloc = ((allocation.B || 0.5) * 100).toFixed(0);
 
   const significantClass = comparison?.significant ? 'badge-success' : 'badge-warning';
-  const significantLabel = comparison?.significant ? '✅ Significant' : '⏳ Not Significant Yet';
+  const significantLabel = comparison?.significant ? 'Significant' : 'Not Significant Yet';
 
   return (
     <div className="content-container">
       {/* ─── Header ─────────────────────────────────────────────────────── */}
       <div className="toolbar" style={{ marginBottom: '1.5rem' }}>
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">🧪 Friends Feature A/B Experiment</h2>
+          <h2 className="toolbar-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature A/B Experiment
+          </h2>
           <p className="toolbar-subtitle">
             {experiment?.description || 'Randomized A/B test comparing Control (Friends disabled) vs Treatment (Friends enabled).'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={experiment?.status} />
-          <button id="experiment-refresh-btn" className="btn-action" onClick={loadData} style={{ fontSize: '0.82rem' }}>
-            ↻ Refresh
+          <button id="experiment-refresh-btn" className="btn-action" onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem' }}>
+            <RefreshCw size={14} /> Refresh
           </button>
         </div>
       </div>
@@ -196,7 +210,7 @@ export function ExperimentsPage() {
         <KPICard
           title="Control Users"
           value={control?.users ?? 0}
-          icon="🔵"
+          icon={<span className="badge-tag badge-info" style={{ fontWeight: 800 }}>A</span>}
           badgeText="Variant A"
           badgeType="info"
           note="Friends disabled"
@@ -204,7 +218,7 @@ export function ExperimentsPage() {
         <KPICard
           title="Treatment Users"
           value={treatment?.users ?? 0}
-          icon="🟢"
+          icon={<span className="badge-tag badge-success" style={{ fontWeight: 800 }}>B</span>}
           badgeText="Variant B"
           badgeType="success"
           note="Friends enabled"
@@ -212,14 +226,14 @@ export function ExperimentsPage() {
         <KPICard
           title="D7 Retention Lift"
           value={lift(comparison?.absoluteLift)}
-          icon="📈"
+          icon={<TrendingUp size={18} color="var(--accent-primary)" />}
           badgeText={significantLabel}
           badgeType={comparison?.significant ? 'success' : 'warning'}
         />
         <KPICard
           title="p-value"
           value={fmtPValue(comparison?.pValue)}
-          icon="📐"
+          icon={<Calculator size={18} color="var(--accent-secondary)" />}
           badgeText={comparison?.hasSufficientData ? 'Z-test' : 'Insufficient data'}
           badgeType={comparison?.hasSufficientData ? 'primary' : 'warning'}
         />
@@ -227,7 +241,7 @@ export function ExperimentsPage() {
 
       {/* ─── Statistical Analysis ─────────────────────────────────────────── */}
       <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon="📐">Statistical Significance (D7 Retention — Primary Metric)</SectionTitle>
+        <SectionTitle icon={<Calculator size={18} color="var(--accent-primary)" />}>Statistical Significance (D7 Retention — Primary Metric)</SectionTitle>
         <SectionSubtitle>
           Two-proportion Z-test comparing Control vs Treatment D7 retention.
           Significance level: α = 0.05.
@@ -236,11 +250,15 @@ export function ExperimentsPage() {
 
         {!comparison?.hasSufficientData ? (
           <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
             background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.25)',
             borderRadius: '10px', padding: '1.25rem', color: 'var(--text-secondary)', fontSize: '0.87rem',
           }}>
-            ⚠️ <strong>Insufficient data for reliable statistical analysis.</strong>{' '}
-            {comparison?.verdict || 'Continue collecting data before drawing conclusions.'}
+            <AlertTriangle size={16} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <strong>Insufficient data for reliable statistical analysis.</strong>{' '}
+              {comparison?.verdict || 'Continue collecting data before drawing conclusions.'}
+            </div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -265,15 +283,16 @@ export function ExperimentsPage() {
         )}
 
         {comparison?.verdict && comparison?.hasSufficientData && (
-          <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', background: 'rgba(79,70,229,0.06)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-            📋 {comparison.verdict}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '1rem', padding: '0.85rem 1rem', background: 'rgba(79,70,229,0.06)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            <FileText size={15} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>{comparison.verdict}</div>
           </div>
         )}
       </div>
 
       {/* ─── Retention Comparison Table ───────────────────────────────────── */}
       <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon="📊">Retention Cohort Breakdown</SectionTitle>
+        <SectionTitle icon={<BarChart3 size={18} color="var(--accent-primary)" />}>Retention Cohort Breakdown</SectionTitle>
         <SectionSubtitle>
           Exact documented retention windows: Day 1 ([T₀+24h, T₀+48h)) and Day 7 ([T₀+168h, T₀+192h)).
           <strong>Assigned:</strong> total post-launch participants.
@@ -298,7 +317,7 @@ export function ExperimentsPage() {
             <tbody>
               <tr>
                 <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  🔵 Control (Variant A)
+                  <span className="badge-tag badge-info" style={{ marginRight: '0.4rem', fontWeight: 700 }}>A</span> Control (Variant A)
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>Friends Disabled</div>
                 </td>
                 <td className="tabular-nums" style={{ fontWeight: 700 }}>{control?.users ?? 0}</td>
@@ -315,7 +334,7 @@ export function ExperimentsPage() {
               </tr>
               <tr style={{ background: 'var(--accent-primary-light, rgba(79,70,229,0.04))' }}>
                 <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  🟢 Treatment (Variant B)
+                  <span className="badge-tag badge-success" style={{ marginRight: '0.4rem', fontWeight: 700 }}>B</span> Treatment (Variant B)
                   <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>Friends Enabled</div>
                 </td>
                 <td className="tabular-nums" style={{ fontWeight: 700 }}>{treatment?.users ?? 0}</td>
@@ -337,7 +356,7 @@ export function ExperimentsPage() {
 
       {/* ─── Habit Engagement ─────────────────────────────────────────────── */}
       <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon="✅">Habit Engagement</SectionTitle>
+        <SectionTitle icon={<CheckCircle2 size={18} color="var(--accent-success)" />}>Habit Engagement</SectionTitle>
         <SectionSubtitle>
           Habit creation and completion metrics per variant cohort.
         </SectionSubtitle>
@@ -346,8 +365,8 @@ export function ExperimentsPage() {
             <thead>
               <tr>
                 <th>Metric</th>
-                <th>🔵 Control (A)</th>
-                <th>🟢 Treatment (B)</th>
+                <th><span className="badge-tag badge-info" style={{ marginRight: '0.35rem' }}>A</span> Control</th>
+                <th><span className="badge-tag badge-success" style={{ marginRight: '0.35rem' }}>B</span> Treatment</th>
               </tr>
             </thead>
             <tbody>
@@ -362,7 +381,7 @@ export function ExperimentsPage() {
 
       {/* ─── Friends Engagement (Treatment) ──────────────────────────────── */}
       <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon="🤝">Friends Engagement (Treatment Group — Variant B)</SectionTitle>
+        <SectionTitle icon={<Users size={18} color="var(--accent-primary)" />}>Friends Engagement (Treatment Group — Variant B)</SectionTitle>
         <SectionSubtitle>
           These metrics apply only to Variant B (Friends enabled) users.
           Exposure = user actually viewed the Friends feature UI.

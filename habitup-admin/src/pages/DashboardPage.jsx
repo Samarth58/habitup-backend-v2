@@ -1,4 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import {
+  Users,
+  Flame,
+  Target,
+  CheckCircle2,
+  Bell,
+  Clock,
+  Info,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { KPICard } from '../components/KPICard';
 
@@ -73,7 +82,7 @@ export function DashboardPage() {
             <KPICard
               title="TOTAL REGISTERED USERS"
               value={metrics.users?.total}
-              icon="👥"
+              icon={<Users size={18} color="var(--accent-primary)" />}
               badgeText={`+${metrics.users?.new_in_period || 0} New`}
               badgeType="success"
             />
@@ -81,7 +90,7 @@ export function DashboardPage() {
             <KPICard
               title="ACTIVE USERS IN PERIOD"
               value={metrics.users?.active_in_period}
-              icon="🔥"
+              icon={<Flame size={18} color="var(--accent-warning)" />}
               badgeText={`${metrics.users?.deleted_in_period || 0} Deleted`}
               badgeType="warning"
             />
@@ -89,7 +98,7 @@ export function DashboardPage() {
             <KPICard
               title="TOTAL HABITS CREATED"
               value={metrics.habits?.total}
-              icon="🎯"
+              icon={<Target size={18} color="var(--accent-primary)" />}
               badgeText={`+${metrics.habits?.created_in_period || 0} in Period`}
               badgeType="info"
             />
@@ -97,7 +106,7 @@ export function DashboardPage() {
             <KPICard
               title="TOTAL CHECK-INS"
               value={metrics.completions?.total}
-              icon="✅"
+              icon={<CheckCircle2 size={18} color="var(--accent-success)" />}
               badgeText={`+${metrics.completions?.in_period || 0} in Period`}
               badgeType="success"
             />
@@ -105,7 +114,7 @@ export function DashboardPage() {
             <KPICard
               title="REMINDERS ACTIVE"
               value={metrics.reminders?.total}
-              icon="🔔"
+              icon={<Bell size={18} color="var(--accent-secondary)" />}
               badgeText="Configured"
               badgeType="info"
             />
@@ -113,8 +122,8 @@ export function DashboardPage() {
 
           {/* Session Usage Summary Card */}
           <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-              ⏱️ Session & Usage Duration Analytics
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+              <Clock size={18} color="var(--accent-primary)" /> Session & Usage Duration Analytics
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
@@ -147,8 +156,9 @@ export function DashboardPage() {
             </div>
 
             {metrics.sessions?.usage_note && (
-              <div style={{ marginTop: '1.25rem', fontSize: '0.82rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '0.85rem' }}>
-                📌 <strong>Usage Note:</strong> {metrics.sessions.usage_note}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem', marginTop: '1.25rem', fontSize: '0.82rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '0.85rem' }}>
+                <Info size={15} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-primary)' }} />
+                <div><strong>Usage Note:</strong> {metrics.sessions.usage_note}</div>
               </div>
             )}
           </div>

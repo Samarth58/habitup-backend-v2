@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { api } from '../services/api';
 
 export function UserDetailModal({ userId, onClose }) {
@@ -47,7 +48,9 @@ export function UserDetailModal({ userId, onClose }) {
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content fade-in" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="modal-close" onClick={onClose} aria-label="Close dialog">✕</button>
+        <button className="modal-close" onClick={onClose} aria-label="Close dialog">
+          <X size={18} />
+        </button>
 
         {loading ? (
           <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>

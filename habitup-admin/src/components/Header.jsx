@@ -1,4 +1,5 @@
 import React from 'react';
+import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export function Header({ title, onToggleCollapse }) {
@@ -14,7 +15,7 @@ export function Header({ title, onToggleCollapse }) {
             aria-label="Toggle sidebar collapse"
             title="Toggle Sidebar"
           >
-            <span aria-hidden="true">☰</span>
+            <Menu size={18} aria-hidden="true" />
           </button>
         )}
         <h1 className="header-title">{title}</h1>

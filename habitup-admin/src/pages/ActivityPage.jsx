@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { api } from '../services/api';
 
 export function ActivityPage() {
@@ -78,7 +79,9 @@ export function ActivityPage() {
             onChange={(e) => setUserIdFilter(e.target.value)}
             aria-label="Filter by user UUID"
           />
-          <button type="submit" className="pagination-btn" style={{ fontWeight: 700 }}>Filter User</button>
+          <button type="submit" className="pagination-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+            <Filter size={14} /> Filter User
+          </button>
 
           <select
             className="select-input"
@@ -162,16 +165,18 @@ export function ActivityPage() {
             className="pagination-btn"
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            ← Previous
+            <ChevronLeft size={16} /> Previous
           </button>
 
           <button
             className="pagination-btn"
             disabled={page >= pagination.totalPages || loading}
             onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            Next →
+            Next <ChevronRight size={16} />
           </button>
         </div>
       </div>

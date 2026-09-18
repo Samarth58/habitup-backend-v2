@@ -1,4 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import {
+  Smartphone,
+  Users,
+  Clock,
+  Zap,
+  TrendingUp,
+  PieChart,
+  Trophy,
+} from 'lucide-react';
 import { api } from '../services/api';
 import { DailyUsageChart, ActivityDistribution } from '../components/Charts';
 import { KPICard } from '../components/KPICard';
@@ -83,28 +92,28 @@ export function AnalyticsPage() {
             <KPICard
               title="Total Sessions"
               value={usageData?.summary?.total_sessions ?? 0}
-              icon="📱"
+              icon={<Smartphone size={18} color="var(--accent-primary)" />}
               badgeText="Recorded"
               badgeType="primary"
             />
             <KPICard
               title="Active Users"
               value={usageData?.summary?.active_users ?? 0}
-              icon="👥"
+              icon={<Users size={18} color="var(--accent-primary)" />}
               badgeText="In Period"
               badgeType="info"
             />
             <KPICard
               title="Total Usage"
               value={formatSeconds(usageData?.summary?.estimated_total_usage_seconds)}
-              icon="⏱️"
+              icon={<Clock size={18} color="var(--accent-success)" />}
               badgeText="Estimated"
               badgeType="success"
             />
             <KPICard
               title="Average Session"
               value={formatSeconds(usageData?.summary?.estimated_avg_session_seconds)}
-              icon="⚡"
+              icon={<Zap size={18} color="var(--accent-warning)" />}
               badgeText="Per Session"
               badgeType="warning"
             />
@@ -114,8 +123,8 @@ export function AnalyticsPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-                📊 Daily Session Usage Trend
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+                <TrendingUp size={18} color="var(--accent-primary)" /> Daily Session Usage Trend
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                 Daily activity sessions recorded across the platform
@@ -125,8 +134,8 @@ export function AnalyticsPage() {
 
             {/* Event Distribution */}
             <div className="glass-card fade-in">
-              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-                🎯 Activity Distribution Breakdown
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+                <PieChart size={18} color="var(--accent-primary)" /> Activity Distribution Breakdown
               </h3>
               <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
                 Event distribution across <span className="tabular-nums font-semibold">{activityData?.summary?.total_events || 0}</span> total actions
@@ -137,8 +146,8 @@ export function AnalyticsPage() {
 
           {/* Most Active Users Leaderboard */}
           <div className="glass-card fade-in">
-            <h3 style={{ fontSize: '1.08rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-              🏆 Most Active Users Leaderboard
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+              <Trophy size={18} color="var(--accent-warning)" /> Most Active Users Leaderboard
             </h3>
             <div className="table-container">
               <table className="data-table">
