@@ -502,6 +502,21 @@ describe('Personalized Notification — Integration', () => {
     test('notification_deliveries record is created when scheduler fires for a due notification', async () => {
       // Use UTC user with morning notification at 08:00 UTC
       const freshUser = await registerTestUser();
+
+      // Register device token so user has at least one active device token
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_pers_tok_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            platform: 'android',
+            timezone: 'UTC',
+          }),
+        },
+        freshUser.accessToken
+      );
+
       await authFetch(
         '/notifications/preferences',
         {
@@ -547,6 +562,21 @@ describe('Personalized Notification — Integration', () => {
 
     test('duplicate delivery protection: running scheduler twice for same slot does not duplicate record', async () => {
       const freshUser = await registerTestUser();
+
+      // Register device token so user has at least one active device token
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_pers_tok_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            platform: 'android',
+            timezone: 'UTC',
+          }),
+        },
+        freshUser.accessToken
+      );
+
       await authFetch(
         '/notifications/preferences',
         {
@@ -572,6 +602,21 @@ describe('Personalized Notification — Integration', () => {
       );
 
       const run1 = await processScheduledNotifications(targetTime);
+
+      // Ensure user has an active device token for the second scheduler run
+      await authFetch(
+        '/notifications/device-token',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            token: `fcm_pers_tok2_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            platform: 'android',
+            timezone: 'UTC',
+          }),
+        },
+        freshUser.accessToken
+      );
+
       const run2 = await processScheduledNotifications(targetTime);
 
       // Second run should mark this slot as already delivered

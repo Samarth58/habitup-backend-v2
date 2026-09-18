@@ -964,14 +964,16 @@ describe('Notifications API - Device Token Registration', () => {
 
   describe('Automatic Notification Preferences Initialization on Device Token Registration', () => {
     test('User registers a device token with no preference row -> preference row is created with defaults and timezone', async () => {
-      const freshUser = await registerTestUser();
+      const freshUser = await registerTestUser({ timezone: 'Asia/Kolkata' });
 
-      // Verify no preference row initially exists
+      // Verify preference row is initialized on registration with user defaults and timezone
       const initialPrefCheck = await pool.query(
         'SELECT * FROM notification_preferences WHERE user_id = $1',
         [freshUser.user.id]
       );
-      assert.equal(initialPrefCheck.rows.length, 0);
+      assert.equal(initialPrefCheck.rows.length, 1);
+      assert.equal(initialPrefCheck.rows[0].timezone, 'Asia/Kolkata');
+      assert.equal(initialPrefCheck.rows[0].push_enabled, true);
 
       // Register device token with specific timezone
       const token = `fcm_fresh_init_token_${Date.now()}`;
@@ -992,7 +994,7 @@ describe('Notifications API - Device Token Registration', () => {
       const data = await res.json();
       assert.equal(data.success, true);
 
-      // Verify preference row was created with expected defaults
+      // Verify preference row exists with expected defaults
       const { rows } = await pool.query(
         'SELECT * FROM notification_preferences WHERE user_id = $1',
         [freshUser.user.id]
@@ -1010,9 +1012,9 @@ describe('Notifications API - Device Token Registration', () => {
     });
 
     test('User registers another token with an existing preference row -> existing preferences are preserved', async () => {
-      const multiTokenUser = await registerTestUser();
+      const multiTokenUser = await registerTestUser({ timezone: 'Asia/Kolkata' });
 
-      // 1. First device token registers and initializes preferences
+      // 1. First device token registers
       await authFetch(
         '/notifications/device-token',
         {
