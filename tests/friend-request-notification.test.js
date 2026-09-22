@@ -330,4 +330,58 @@ describe('Friend Request FCM Push Notifications', () => {
     assert.equal(result.status, 'pending');
     assert.equal(sendPushMock.mock.callCount(), 1);
   });
+
+  test('7. Accepted historical friend_request with no current friendship allows sending a new request and updates row to pending', async () => {
+    mock.method(firebaseService, 'isFirebaseConfigured', () => true);
+
+    mock.method(pool, 'query', async (query) => {
+      if (query.includes('FROM users') && query.includes('LOWER(username) = LOWER($1)')) {
+        return { rows: [{ id: recipientId, username: 'chetan_08' }] };
+      }
+      if (query.includes('FROM friendships')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (query.includes('FROM friend_requests')) {
+        return { rows: [{ id: 'req-accepted-historical', status: 'accepted' }] };
+      }
+      if (query.includes('UPDATE friend_requests SET')) {
+        return {
+          rows: [
+            {
+              request_id: 'req-accepted-historical',
+              from_user_id: requesterId,
+              to_user_id: recipientId,
+              status: 'pending',
+              created_at: new Date().toISOString(),
+            },
+          ],
+        };
+      }
+      if (query.includes('INSERT INTO user_activity')) return { rows: [] };
+      if (query.includes('FROM device_tokens')) {
+        return {
+          rows: [
+            { id: 'tok-1', user_id: recipientId, token: 'token_chetan', platform: 'android' },
+          ],
+        };
+      }
+      if (query.includes('FROM users WHERE id = $1')) {
+        return { rows: [{ name: 'Sam', username: 'sam_21' }] };
+      }
+      throw new Error(`Unexpected query: ${query}`);
+    });
+
+    const sendPushMock = mock.method(notificationService, 'sendPushNotification', async () => ({
+      success: true,
+      messageId: 'msg-chetan-new-request',
+    }));
+
+    const result = await sendFriendRequest(requesterId, 'chetan_08');
+
+    assert.equal(result.request_id, 'req-accepted-historical');
+    assert.equal(result.status, 'pending');
+    assert.equal(result.to_username, 'chetan_08');
+    assert.equal(sendPushMock.mock.callCount(), 1);
+  });
 });
+

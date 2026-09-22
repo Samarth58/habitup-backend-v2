@@ -52,11 +52,11 @@ async function sendFriendRequest(requesterId, recipientUsername) {
   );
   const request = existing.rows[0];
   if (request?.status === 'pending') throw serviceError('Friend request already sent', 409);
-  if (request?.status === 'accepted' || await isFriendsWith(requesterId, recipient.id)) {
+  if (await isFriendsWith(requesterId, recipient.id)) {
     throw serviceError('Already friends', 409);
   }
 
-  const result = request?.status === 'rejected'
+  const result = request
     ? await pool.query(
       `UPDATE friend_requests SET requester_id = $1, recipient_id = $2,
        status = 'pending', updated_at = NOW() WHERE id = $3

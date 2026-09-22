@@ -289,6 +289,24 @@ describe('Friends API', () => {
     assert.equal(statsResponse.status, 404);
   });
 
+  test('allows sending a new friend request when a historical accepted request exists without an active friendship', async () => {
+    // alice and bob were previously friends and bob was removed, leaving historical 'accepted' row in friend_requests
+    const response = await authFetch('/friends/request', {
+      method: 'POST',
+      body: JSON.stringify({ username: bob.username }),
+    }, alice.accessToken);
+    const body = await response.json();
+    assert.equal(response.status, 201, JSON.stringify(body));
+    assert.equal(body.status, 'pending');
+    assert.equal(body.to_username, bob.username);
+
+    // Verify bob can see the new pending request
+    const pendingRes = await authFetch('/friends/requests', {}, bob.accessToken);
+    const pendingBody = await pendingRes.json();
+    assert.equal(pendingRes.status, 200);
+    assert.ok(pendingBody.pending_requests.some((req) => req.from_username === alice.username));
+  });
+
   test('supports a fresh request after a rejected request', async () => {
     const first = await authFetch('/friends/request', {
       method: 'POST',
