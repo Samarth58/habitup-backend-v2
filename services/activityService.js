@@ -115,34 +115,44 @@ async function getActivityFeed({ userId, activityType, from, to, page = 1, limit
   const conditions = [];
   const queryParams = [];
 
-  if (userId) {
-    queryParams.push(userId);
-    conditions.push(`user_id = $${queryParams.length}`);
+  if (userId && typeof userId === 'string' && userId.trim()) {
+    const trimmed = userId.trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed);
+    if (isUuid) {
+      queryParams.push(trimmed);
+      conditions.push(`ua.user_id = $${queryParams.length}`);
+    } else {
+      const cleanSearch = trimmed.replace(/^@/, '');
+      queryParams.push(`%${cleanSearch}%`);
+      conditions.push(`(u.name ILIKE $${queryParams.length} OR u.email ILIKE $${queryParams.length} OR u.username ILIKE $${queryParams.length})`);
+    }
   }
 
   if (activityType) {
     queryParams.push(activityType);
-    conditions.push(`activity_type = $${queryParams.length}`);
+    conditions.push(`ua.activity_type = $${queryParams.length}`);
   }
 
   if (from) {
     queryParams.push(from);
-    conditions.push(`created_at >= $${queryParams.length}`);
+    conditions.push(`ua.created_at >= $${queryParams.length}`);
   }
 
   if (to) {
     queryParams.push(to);
-    conditions.push(`created_at <= $${queryParams.length}`);
+    conditions.push(`ua.created_at <= $${queryParams.length}`);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const dataQuery = `
-    SELECT id, user_id, activity_type, metadata, created_at,
+    SELECT ua.id, ua.user_id, ua.activity_type, ua.metadata, ua.created_at,
+           u.name AS user_name, u.username AS user_username, u.email AS user_email,
            COUNT(*) OVER() AS total_count
-    FROM user_activity
+    FROM user_activity ua
+    LEFT JOIN users u ON u.id = ua.user_id
     ${whereClause}
-    ORDER BY created_at DESC
+    ORDER BY ua.created_at DESC
     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
   `;
 
@@ -151,8 +161,12 @@ async function getActivityFeed({ userId, activityType, from, to, page = 1, limit
   const total = rows.length > 0 ? parseInt(rows[0].total_count, 10) : 0;
   const totalPages = Math.ceil(total / safeLimit) || 1;
 
-  const events = rows.map(({ total_count, activity_type, metadata, ...rest }) => ({
+  const events = rows.map(({ total_count, activity_type, metadata, user_name, user_username, user_email, ...rest }) => ({
     ...rest,
+    user_name: user_name || null,
+    user_username: user_username || null,
+    user_email: user_email || null,
+    user_display: user_name || (user_username ? `@${user_username}` : null) || user_email || (rest.user_id ? 'User' : 'System'),
     activity_type,
     metadata: sanitizeMetadata(activity_type, metadata),
   }));

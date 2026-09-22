@@ -86,11 +86,11 @@ async function getUserDetail(req, res) {
  * Query params: ?userId=...&activityType=...&from=...&to=...&page=1&limit=50
  */
 async function getActivity(req, res) {
-  const { userId, activityType, from, to, page, limit } = req.query;
+  const { userId, search, q, activityType, from, to, page, limit } = req.query;
 
   try {
     const feed = await getActivityFeed({
-      userId,
+      userId: userId || search || q,
       activityType,
       from,
       to,

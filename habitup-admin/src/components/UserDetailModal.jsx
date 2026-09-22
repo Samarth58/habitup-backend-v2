@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../services/api';
+import { formatActivityDetails } from '../pages/ActivityPage';
 
 export function UserDetailModal({ userId, onClose }) {
   const [userData, setUserData] = useState(null);
@@ -158,9 +159,9 @@ export function UserDetailModal({ userId, onClose }) {
               </div>
             </div>
 
-            {/* Recent Activity Audit Table */}
+            {/* Recent Activity Table */}
             <h3 style={{ fontSize: '0.98rem', fontWeight: 800, marginBottom: '0.85rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-              Recent Activity Audit
+              Recent Activity
             </h3>
             <div className="table-container">
               <table className="data-table">
@@ -168,7 +169,7 @@ export function UserDetailModal({ userId, onClose }) {
                   <tr>
                     <th>Action</th>
                     <th>Timestamp</th>
-                    <th>Metadata Context</th>
+                    <th>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -181,8 +182,8 @@ export function UserDetailModal({ userId, onClose }) {
                         <td className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                           {new Date(act.created_at).toLocaleString()}
                         </td>
-                        <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-mono)' }}>
-                          {act.metadata ? JSON.stringify(act.metadata) : '—'}
+                        <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                          {formatActivityDetails(act.activity_type, act.metadata)}
                         </td>
                       </tr>
                     ))

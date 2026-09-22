@@ -69,10 +69,7 @@ export function UsersPage() {
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">User Management</h2>
-          <p className="toolbar-subtitle">
-            Filter, search, and inspect registered accounts and usage statistics
-          </p>
+          <h2 className="toolbar-title">Users</h2>
         </div>
 
         <form onSubmit={handleSearchSubmit} className="filter-group">
@@ -116,10 +113,10 @@ export function UsersPage() {
             onChange={(e) => setSortField(e.target.value)}
             aria-label="Sort by field"
           >
-            <option value="created_at">Sort: Created Date</option>
-            <option value="username">Sort: Username</option>
-            <option value="email">Sort: Email</option>
-            <option value="last_activity">Sort: Last Activity</option>
+            <option value="created_at">Created Date</option>
+            <option value="username">Username</option>
+            <option value="email">Email</option>
+            <option value="last_activity">Last Activity</option>
           </select>
 
           <select
@@ -128,8 +125,8 @@ export function UsersPage() {
             onChange={(e) => setSortOrder(e.target.value)}
             aria-label="Sort order"
           >
-            <option value="desc">Desc (Newest)</option>
-            <option value="asc">Asc (Oldest)</option>
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
           </select>
         </form>
       </div>
@@ -141,7 +138,7 @@ export function UsersPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>User Account</th>
+              <th>User</th>
               <th>Role</th>
               <th>Status</th>
               <th>Habits</th>
@@ -156,13 +153,13 @@ export function UsersPage() {
             {loading ? (
               <tr>
                 <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  Loading users directory...
+                  Loading users...
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  No users found matching the selected filters.
+                  No users found matching filters.
                 </td>
               </tr>
             ) : (
@@ -226,7 +223,7 @@ export function UsersPage() {
       {/* Pagination Controls */}
       <div className="pagination">
         <span>
-          Showing Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total accounts)
+          Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total)
         </span>
 
         <div className="filter-group">

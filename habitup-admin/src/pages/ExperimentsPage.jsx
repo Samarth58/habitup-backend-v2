@@ -22,14 +22,14 @@ function pct(n) {
 
 function lift(n) {
   if (n == null || isNaN(n)) return '—';
-  const pct = (n * 100).toFixed(1);
-  return n >= 0 ? `+${pct} pp` : `${pct} pp`;
+  const val = (n * 100).toFixed(1);
+  return n >= 0 ? `+${val} pp` : `${val} pp`;
 }
 
 function relativeLift(n) {
   if (n == null || isNaN(n)) return '—';
-  const pct = (n * 100).toFixed(1);
-  return n >= 0 ? `+${pct}%` : `${pct}%`;
+  const val = (n * 100).toFixed(1);
+  return n >= 0 ? `+${val}%` : `${val}%`;
 }
 
 function fmtPValue(p) {
@@ -58,20 +58,12 @@ function StatusBadge({ status }) {
 function SectionTitle({ icon, children }) {
   return (
     <h3 style={{
-      fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem',
+      fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem',
       color: 'var(--text-main)', letterSpacing: '-0.2px',
       display: 'flex', alignItems: 'center', gap: '0.5rem',
     }}>
       {icon} <span>{children}</span>
     </h3>
-  );
-}
-
-function SectionSubtitle({ children }) {
-  return (
-    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-      {children}
-    </p>
   );
 }
 
@@ -141,19 +133,16 @@ export function ExperimentsPage() {
   const treatmentAlloc = ((allocation.B || 0.5) * 100).toFixed(0);
 
   const significantClass = comparison?.significant ? 'badge-success' : 'badge-warning';
-  const significantLabel = comparison?.significant ? 'Significant' : 'Not Significant Yet';
+  const significantLabel = comparison?.significant ? 'Significant' : 'Not Significant';
 
   return (
     <div className="content-container">
       {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="toolbar" style={{ marginBottom: '1.5rem' }}>
+      <div className="toolbar" style={{ marginBottom: '1.25rem' }}>
         <div className="toolbar-heading">
           <h2 className="toolbar-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature A/B Experiment
+            <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature Experiment
           </h2>
-          <p className="toolbar-subtitle">
-            {experiment?.description || 'Randomized A/B test comparing Control (Friends disabled) vs Treatment (Friends enabled).'}
-          </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={experiment?.status} />
@@ -164,30 +153,30 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── Allocation & Status Banner ──────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
           <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>EXPERIMENT ID</div>
-            <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.8rem', color: 'var(--accent-primary, #4f46e5)', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>EXPERIMENT</div>
+            <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.82rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
               {experiment?.name}
             </div>
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>ALLOCATION</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem' }}>
               Control {controlAlloc}% / Treatment {treatmentAlloc}%
             </div>
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>PRIMARY METRIC</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem', textTransform: 'uppercase' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', textTransform: 'uppercase' }}>
               {experiment?.primaryMetric?.replace('_', ' ')}
             </div>
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>TARGET SAMPLE</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
-              {experiment?.targetSampleSize ?? '—'} per variant
+            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem' }}>
+              {experiment?.targetSampleSize ?? '—'} / variant
             </div>
           </div>
           <div>
@@ -198,7 +187,7 @@ export function ExperimentsPage() {
           </div>
           <div>
             <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>TOTAL ASSIGNED</div>
-            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1.1rem' }}>
+            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1.05rem' }}>
               {(control?.users || 0) + (treatment?.users || 0)}
             </div>
           </div>
@@ -206,7 +195,7 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── KPI Cards ───────────────────────────────────────────────────── */}
-      <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+      <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
         <KPICard
           title="Control Users"
           value={control?.users ?? 0}
@@ -240,28 +229,22 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── Statistical Analysis ─────────────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon={<Calculator size={18} color="var(--accent-primary)" />}>Statistical Significance (D7 Retention — Primary Metric)</SectionTitle>
-        <SectionSubtitle>
-          Two-proportion Z-test comparing Control vs Treatment D7 retention.
-          Significance level: α = 0.05.
-          Users without completed D7 windows are excluded from the denominator.
-        </SectionSubtitle>
+      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
+        <SectionTitle icon={<Calculator size={18} color="var(--accent-primary)" />}>Statistical Significance (D7 Retention)</SectionTitle>
 
         {!comparison?.hasSufficientData ? (
           <div style={{
             display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
             background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.25)',
-            borderRadius: '10px', padding: '1.25rem', color: 'var(--text-secondary)', fontSize: '0.87rem',
+            borderRadius: '10px', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem',
           }}>
             <AlertTriangle size={16} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
-              <strong>Insufficient data for reliable statistical analysis.</strong>{' '}
-              {comparison?.verdict || 'Continue collecting data before drawing conclusions.'}
+              <strong>Insufficient data:</strong> {comparison?.verdict || 'Collecting sample data.'}
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
             {[
               { label: 'Control D7 Retention', value: pct(comparison.controlValue) },
               { label: 'Treatment D7 Retention', value: pct(comparison.treatmentValue) },
@@ -270,20 +253,20 @@ export function ExperimentsPage() {
               { label: 'Z-Score', value: comparison.zScore?.toFixed(3) ?? '—' },
               { label: 'p-value', value: fmtPValue(comparison.pValue) },
               { label: '95% Confidence Interval', value: fmtCI(comparison.confidenceInterval) },
-              { label: 'Statistically Significant', value: <span className={`badge-tag ${significantClass}`}>{comparison.significant ? 'YES' : 'NO'}</span> },
+              { label: 'Statistical Significance', value: <span className={`badge-tag ${significantClass}`}>{comparison.significant ? 'Significant' : 'Not Significant'}</span> },
             ].map(({ label, value }) => (
-              <div key={label} style={{ padding: '0.85rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '6px' }}>
+              <div key={label} style={{ padding: '0.75rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>
                   {label.toUpperCase()}
                 </div>
-                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>{value}</div>
+                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{value}</div>
               </div>
             ))}
           </div>
         )}
 
         {comparison?.verdict && comparison?.hasSufficientData && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '1rem', padding: '0.85rem 1rem', background: 'rgba(79,70,229,0.06)', borderRadius: '8px', fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '0.85rem', padding: '0.75rem 0.9rem', background: 'rgba(79,70,229,0.06)', borderRadius: '8px', fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
             <FileText size={15} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>{comparison.verdict}</div>
           </div>
@@ -291,34 +274,26 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── Retention Comparison Table ───────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon={<BarChart3 size={18} color="var(--accent-primary)" />}>Retention Cohort Breakdown</SectionTitle>
-        <SectionSubtitle>
-          Exact documented retention windows: Day 1 ([T₀+24h, T₀+48h)) and Day 7 ([T₀+168h, T₀+192h)).
-          <strong>Assigned:</strong> total post-launch participants.
-          <strong>Eligible:</strong> users who completed the observation window (T₀+48h for D1, T₀+192h for D7).
-          <strong>Retained:</strong> eligible users with ≥1 meaningful action in window.
-          <strong>Retention %:</strong> Retained / Eligible.
-        </SectionSubtitle>
+      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
+        <SectionTitle icon={<BarChart3 size={18} color="var(--accent-primary)" />}>Cohort Retention</SectionTitle>
         <div className="table-container">
           <table className="data-table">
             <thead>
               <tr>
-                <th>Variant Cohort</th>
-                <th>Total Assigned</th>
+                <th>Cohort</th>
+                <th>Assigned</th>
                 <th>D1 Eligible</th>
                 <th>D1 Retained</th>
-                <th>D1 Retention %</th>
+                <th>D1 Retention</th>
                 <th>D7 Eligible</th>
                 <th>D7 Retained</th>
-                <th>D7 Retention %</th>
+                <th>D7 Retention</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  <span className="badge-tag badge-info" style={{ marginRight: '0.4rem', fontWeight: 700 }}>A</span> Control (Variant A)
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>Friends Disabled</div>
+                  <span className="badge-tag badge-info" style={{ marginRight: '0.4rem', fontWeight: 700 }}>A</span> Control
                 </td>
                 <td className="tabular-nums" style={{ fontWeight: 700 }}>{control?.users ?? 0}</td>
                 <td className="tabular-nums">{control?.d1Eligible ?? 0}</td>
@@ -334,8 +309,7 @@ export function ExperimentsPage() {
               </tr>
               <tr style={{ background: 'var(--accent-primary-light, rgba(79,70,229,0.04))' }}>
                 <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  <span className="badge-tag badge-success" style={{ marginRight: '0.4rem', fontWeight: 700 }}>B</span> Treatment (Variant B)
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>Friends Enabled</div>
+                  <span className="badge-tag badge-success" style={{ marginRight: '0.4rem', fontWeight: 700 }}>B</span> Treatment
                 </td>
                 <td className="tabular-nums" style={{ fontWeight: 700 }}>{treatment?.users ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d1Eligible ?? 0}</td>
@@ -355,11 +329,8 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── Habit Engagement ─────────────────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
+      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
         <SectionTitle icon={<CheckCircle2 size={18} color="var(--accent-success)" />}>Habit Engagement</SectionTitle>
-        <SectionSubtitle>
-          Habit creation and completion metrics per variant cohort.
-        </SectionSubtitle>
         <div className="table-container">
           <table className="data-table">
             <thead>
@@ -380,18 +351,14 @@ export function ExperimentsPage() {
       </div>
 
       {/* ─── Friends Engagement (Treatment) ──────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.5rem' }}>
-        <SectionTitle icon={<Users size={18} color="var(--accent-primary)" />}>Friends Engagement (Treatment Group — Variant B)</SectionTitle>
-        <SectionSubtitle>
-          These metrics apply only to Variant B (Friends enabled) users.
-          Exposure = user actually viewed the Friends feature UI.
-        </SectionSubtitle>
+      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
+        <SectionTitle icon={<Users size={18} color="var(--accent-primary)" />}>Friends Engagement (Variant B)</SectionTitle>
         {(treatment?.users ?? 0) === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', padding: '1.5rem 0' }}>
-            No Treatment users assigned yet. Data will appear once the experiment collects participants.
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem 0' }}>
+            No Treatment users assigned yet.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
             {[
               { label: 'Exposure Count', value: friends?.exposureCount ?? 0 },
               { label: 'Exposure Rate', value: pct(friends?.exposureRate) },
@@ -403,25 +370,15 @@ export function ExperimentsPage() {
               { label: 'Users with Friends Rate', value: pct(friends?.usersWithFriendsRate) },
               { label: 'Avg Friends per User', value: friends?.avgFriendsPerUser?.toFixed(2) ?? '—' },
             ].map(({ label, value }) => (
-              <div key={label} style={{ padding: '0.85rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '10px' }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '6px' }}>
+              <div key={label} style={{ padding: '0.75rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>
                   {label.toUpperCase()}
                 </div>
-                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1rem' }}>{value}</div>
+                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{value}</div>
               </div>
             ))}
           </div>
         )}
-      </div>
-
-      {/* ─── Disclaimer ───────────────────────────────────────────────────── */}
-      <div style={{ fontSize: '0.76rem', color: 'var(--text-dim, #94a3b8)', padding: '0 0 2rem 0', lineHeight: 1.6 }}>
-        <strong>Note:</strong> This is a <em>randomized A/B experiment</em>. Control and Treatment users are assigned
-        concurrently during the experiment period — this is not a before/after (pre/post) analysis. 
-        Variant assignment is performed by the backend and cannot be manipulated by the client. 
-        Users registered before the experiment start date are not included in either cohort.
-        D7 retention uses the exact Day-7 window [T₀+168h, T₀+192h); users who have not yet completed
-        their observation window are excluded from the D7 denominator.
       </div>
     </div>
   );

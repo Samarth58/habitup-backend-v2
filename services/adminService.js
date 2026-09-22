@@ -482,6 +482,8 @@ async function getUsageAnalytics({ period, from: customFrom, to: customTo }) {
     SELECT
       s.user_id,
       u.email,
+      u.name,
+      u.username,
       COUNT(*)::int AS session_count,
       COALESCE(SUM(
         GREATEST(
@@ -499,7 +501,7 @@ async function getUsageAnalytics({ period, from: customFrom, to: customTo }) {
     LEFT JOIN users u ON s.user_id = u.id
     WHERE s.created_at <= $2::timestamptz
       AND COALESCE(s.last_used_at, s.created_at) >= $1::timestamptz
-    GROUP BY s.user_id, u.email
+    GROUP BY s.user_id, u.email, u.name, u.username
     ORDER BY estimated_usage_seconds DESC
     LIMIT 10
   `;

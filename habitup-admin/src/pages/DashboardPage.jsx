@@ -44,10 +44,7 @@ export function DashboardPage() {
       {/* Top Filter Bar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">System Overview</h2>
-          <p className="toolbar-subtitle">
-            High-level metrics across users, habits, check-ins, and session usage
-          </p>
+          <h2 className="toolbar-title">Overview</h2>
         </div>
 
         <div className="filter-group">
@@ -122,14 +119,14 @@ export function DashboardPage() {
 
           {/* Session Usage Summary Card */}
           <div className="glass-card fade-in" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-              <Clock size={18} color="var(--accent-primary)" /> Session & Usage Duration Analytics
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, marginBottom: '1.25rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+              <Clock size={18} color="var(--accent-primary)" /> Session & Usage Analytics
             </h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.25rem' }}>
               <div className="neu-inset-tile">
                 <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
-                  TOTAL SESSIONS IN PERIOD
+                  TOTAL SESSIONS
                 </div>
                 <div className="tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--accent-primary)', marginTop: '0.25rem' }}>
                   {metrics.sessions?.total_in_period ?? 0}
@@ -158,7 +155,7 @@ export function DashboardPage() {
             {metrics.sessions?.usage_note && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.45rem', marginTop: '1.25rem', fontSize: '0.82rem', color: 'var(--text-muted)', borderTop: '1px solid rgba(226, 232, 240, 0.7)', paddingTop: '0.85rem' }}>
                 <Info size={15} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent-primary)' }} />
-                <div><strong>Usage Note:</strong> {metrics.sessions.usage_note}</div>
+                <div><strong>Note:</strong> {metrics.sessions.usage_note}</div>
               </div>
             )}
           </div>

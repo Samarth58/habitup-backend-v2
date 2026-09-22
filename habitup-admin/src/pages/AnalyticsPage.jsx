@@ -32,7 +32,7 @@ export function AnalyticsPage() {
         setActivityData(activity);
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load analytics reports');
+        setError(err.message || 'Failed to load analytics');
       })
       .finally(() => {
         setLoading(false);
@@ -55,10 +55,7 @@ export function AnalyticsPage() {
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title">Usage & Engagement Analytics</h2>
-          <p className="toolbar-subtitle">
-            Longitudinal session trends, user distribution, and engagement leaderboards
-          </p>
+          <h2 className="toolbar-title">Analytics</h2>
         </div>
 
         <div className="filter-group">
@@ -83,11 +80,11 @@ export function AnalyticsPage() {
 
       {loading ? (
         <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Computing analytics workspace...
+          Loading analytics...
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Usage Analytics Top Summary Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Summary Cards */}
           <div className="stats-grid">
             <KPICard
               title="Total Sessions"
@@ -100,7 +97,7 @@ export function AnalyticsPage() {
               title="Active Users"
               value={usageData?.summary?.active_users ?? 0}
               icon={<Users size={18} color="var(--accent-primary)" />}
-              badgeText="In Period"
+              badgeText="Period"
               badgeType="info"
             />
             <KPICard
@@ -120,42 +117,35 @@ export function AnalyticsPage() {
           </div>
 
           {/* Charts Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-                <TrendingUp size={18} color="var(--accent-primary)" /> Daily Session Usage Trend
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+                <TrendingUp size={18} color="var(--accent-primary)" /> Daily Usage Trend
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Daily activity sessions recorded across the platform
-              </p>
               <DailyUsageChart data={usageData?.daily || []} />
             </div>
 
             {/* Event Distribution */}
             <div className="glass-card fade-in">
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '0.35rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-                <PieChart size={18} color="var(--accent-primary)" /> Activity Distribution Breakdown
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+                <PieChart size={18} color="var(--accent-primary)" /> Activity Distribution
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-                Event distribution across <span className="tabular-nums font-semibold">{activityData?.summary?.total_events || 0}</span> total actions
-              </p>
               <ActivityDistribution byType={activityData?.summary?.by_type || {}} />
             </div>
           </div>
 
           {/* Most Active Users Leaderboard */}
           <div className="glass-card fade-in">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.08rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
-              <Trophy size={18} color="var(--accent-warning)" /> Most Active Users Leaderboard
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
+              <Trophy size={18} color="var(--accent-warning)" /> Most Active Users
             </h3>
             <div className="table-container">
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Rank</th>
-                    <th>User Email</th>
-                    <th>User ID</th>
+                    <th>User</th>
                     <th>Sessions</th>
                     <th>Est. Total Usage</th>
                   </tr>
@@ -163,7 +153,7 @@ export function AnalyticsPage() {
                 <tbody>
                   {usageData?.most_active_users && usageData.most_active_users.length > 0 ? (
                     usageData.most_active_users.map((user, idx) => (
-                      <tr key={user.user_id}>
+                      <tr key={user.user_id || idx}>
                         <td>
                           <span
                             className={`badge-tag badge-${idx === 0 ? 'warning' : idx === 1 ? 'info' : 'primary'}`}
@@ -171,9 +161,22 @@ export function AnalyticsPage() {
                             #{idx + 1}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{user.email}</td>
-                        <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                          {user.user_id}
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                              {user.name || user.email}
+                            </span>
+                            {user.username && (
+                              <span style={{ fontSize: '0.76rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                                @{user.username}
+                              </span>
+                            )}
+                            {user.name && user.email && (
+                              <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                {user.email}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success)' }}>
                           {user.session_count}
@@ -185,7 +188,7 @@ export function AnalyticsPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2.5rem' }}>
+                      <td colSpan="4" style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2.5rem' }}>
                         No session activity recorded for this period.
                       </td>
                     </tr>
