@@ -117,7 +117,7 @@ export function AnalyticsPage() {
           </div>
 
           {/* Charts Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem', alignItems: 'start' }}>
             {/* Daily Usage Chart */}
             <div className="glass-card fade-in">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.2px' }}>
