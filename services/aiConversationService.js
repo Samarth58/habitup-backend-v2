@@ -166,6 +166,55 @@ async function addMessage(conversationId, role, content) {
 }
 
 /**
+ * Atomically inserts both user message and assistant reply within a database transaction.
+ * Ensures the conversation updated_at timestamp is touched and prevents orphaned messages.
+ *
+ * @param {string} conversationId
+ * @param {string} userContent
+ * @param {string} assistantContent
+ * @returns {Promise<{ userMessage: object, assistantMessage: object }>}
+ */
+async function addMessagePair(conversationId, userContent, assistantContent) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const userRes = await client.query(
+      `INSERT INTO ai_messages (conversation_id, role, content)
+       VALUES ($1, 'user', $2)
+       RETURNING id, conversation_id, role, content, created_at`,
+      [conversationId, userContent]
+    );
+
+    const assistantRes = await client.query(
+      `INSERT INTO ai_messages (conversation_id, role, content)
+       VALUES ($1, 'assistant', $2)
+       RETURNING id, conversation_id, role, content, created_at`,
+      [conversationId, assistantContent]
+    );
+
+    await client.query(
+      `UPDATE ai_conversations
+       SET updated_at = NOW()
+       WHERE id = $1`,
+      [conversationId]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      userMessage: userRes.rows[0],
+      assistantMessage: assistantRes.rows[0],
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Loads the latest messages window for a conversation bounded by message count and total character size.
  *
  * @param {string} conversationId
@@ -214,5 +263,7 @@ module.exports = {
   getConversationWithMessages,
   deleteConversation,
   addMessage,
+  addMessagePair,
   getRecentMessagesForGemini,
 };
+

@@ -68,6 +68,10 @@ function sanitizeAIErrorMessage(err) {
     return 'AI service quota temporarily exhausted. Please try again later.';
   }
 
+  if (isRetryableTransientError(err)) {
+    return 'AI service is temporarily unavailable due to high demand. Please try again in a few moments.';
+  }
+
   return 'Failed to generate AI response. Please try again later.';
 }
 
@@ -111,6 +115,71 @@ function buildContextString(context = {}) {
 }
 
 /**
+ * Normalizes an arbitrary history array so that:
+ * 1. Roles are mapped to 'user' and 'model'.
+ * 2. The first turn is always 'user' (leading 'model' messages are dropped).
+ * 3. Consecutive turns of the same role are combined/deduplicated.
+ * 4. The last turn is 'model' (or history is empty) so that appending the new 'user' turn alternates strictly.
+ *
+ * @param {Array<{ role: string, content: string }>} history
+ * @returns {Array<{ role: 'user'|'model', content: string }>}
+ */
+function normalizeHistoryForGemini(history) {
+  if (!history || !Array.isArray(history) || history.length === 0) {
+    return [];
+  }
+
+  // 1. Map roles and filter empty content
+  const mapped = [];
+  for (const item of history) {
+    if (!item || !item.content || typeof item.content !== 'string' || !item.content.trim()) {
+      continue;
+    }
+    const rawRole = (item.role || '').trim().toLowerCase();
+    const role = (rawRole === 'assistant' || rawRole === 'model') ? 'model' : 'user';
+    mapped.push({ role, content: item.content.trim() });
+  }
+
+  if (mapped.length === 0) {
+    return [];
+  }
+
+  // 2. Drop leading 'model' messages (Gemini requires the conversation to start with 'user')
+  let startIndex = 0;
+  while (startIndex < mapped.length && mapped[startIndex].role === 'model') {
+    startIndex++;
+  }
+
+  if (startIndex >= mapped.length) {
+    return [];
+  }
+
+  // 3. Ensure strictly alternating turns by merging consecutive identical roles
+  const alternating = [];
+  for (let i = startIndex; i < mapped.length; i++) {
+    const current = mapped[i];
+    if (alternating.length === 0) {
+      alternating.push({ ...current });
+    } else {
+      const prev = alternating[alternating.length - 1];
+      if (prev.role === current.role) {
+        prev.content = `${prev.content}\n${current.content}`;
+      } else {
+        alternating.push({ ...current });
+      }
+    }
+  }
+
+  // 4. Since the upcoming prompt is 'user', the prior history must end with 'model'
+  // If the last history turn is 'user', drop it to avoid consecutive [user, user]
+  while (alternating.length > 0 && alternating[alternating.length - 1].role === 'user') {
+    alternating.pop();
+  }
+
+  return alternating;
+}
+
+/**
  * Formats user message, optional context, and optional conversation history for Gemini API.
  *
  * @param {string} message - Current user message.
@@ -120,8 +189,9 @@ function buildContextString(context = {}) {
  */
 function buildContents(message, context = {}, history = []) {
   const contextPrefix = buildContextString(context);
+  const normalizedHistory = normalizeHistoryForGemini(history);
 
-  if (!history || !Array.isArray(history) || history.length === 0) {
+  if (normalizedHistory.length === 0) {
     if (contextPrefix) {
       return `${contextPrefix}\n\n[User Message]\n${message.trim()}`;
     }
@@ -131,18 +201,18 @@ function buildContents(message, context = {}, history = []) {
   const contents = [];
   let contextInjected = false;
 
-  for (let i = 0; i < history.length; i++) {
-    const item = history[i];
-    const role = item.role === 'assistant' ? 'model' : (item.role === 'model' ? 'model' : 'user');
-    let text = item.content.trim();
+  for (let i = 0; i < normalizedHistory.length; i++) {
+    const item = normalizedHistory[i];
+    let text = item.content;
 
-    if (role === 'user' && !contextInjected && contextPrefix) {
+    // Inject context into the very first user message
+    if (item.role === 'user' && !contextInjected && contextPrefix) {
       text = `${contextPrefix}\n\n[User Message]\n${text}`;
       contextInjected = true;
     }
 
     contents.push({
-      role,
+      role: item.role,
       parts: [{ text }],
     });
   }
@@ -228,6 +298,14 @@ async function generateAIResponse(message, context = {}, history = [], retries =
       console.warn('[aiService] Transient upstream Gemini rate/availability spike, retrying in 1.5s...');
       await new Promise((resolve) => setTimeout(resolve, 1500));
       return generateAIResponse(message, context, history, retries - 1);
+    }
+
+    if (isRetryableTransientError(err)) {
+      console.warn('[aiService] Upstream Gemini high demand / availability error after retries.');
+      const transientErr = new Error('AI service is temporarily unavailable due to high demand. Please try again in a few moments.');
+      transientErr.status = 503;
+      transientErr.isSafe = true;
+      throw transientErr;
     }
 
     // Sanitize error to prevent leaking sensitive provider internals/metrics/JSON

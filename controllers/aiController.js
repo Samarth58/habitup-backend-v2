@@ -8,6 +8,7 @@ const {
   getConversationWithMessages,
   deleteConversation,
   addMessage,
+  addMessagePair,
   getRecentMessagesForGemini,
 } = require('../services/aiConversationService');
 
@@ -163,15 +164,12 @@ async function handleAIChat(req, res) {
       recentHistory = sanitizedClientHistory;
     }
 
-    // 2. Persist user message to DB
-    await addMessage(conversation.id, 'user', trimmedMessage);
-
-    // 3. Load user context and generate AI response
+    // 2. Load user context and generate AI response
     const userContext = await getAIUserContext(req.userId);
     const reply = await generateAIResponse(trimmedMessage, userContext, recentHistory);
 
-    // 4. Persist assistant response to DB
-    await addMessage(conversation.id, 'assistant', reply);
+    // 3. Atomically persist both user message and assistant reply to DB
+    await addMessagePair(conversation.id, trimmedMessage, reply);
 
     return res.status(200).json({
       conversationId: conversation.id,
