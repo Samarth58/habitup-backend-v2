@@ -265,42 +265,214 @@ export function ActivityTrendChart({ data = [], height = 220 }) {
   );
 }
 
-export function DailyUsageChart({ data = [] }) {
+export function DailyUsageChart({ data = [], height = 180 }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
   if (!data || data.length === 0) {
     return (
-      <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+      <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
         No daily usage data recorded for this timeframe.
       </div>
     );
   }
 
-  const maxSessions = Math.max(...data.map((d) => d.sessions || 0), 1);
-  const labelStep = data.length <= 8 ? 1 : data.length <= 16 ? 2 : data.length <= 35 ? 5 : 7;
+  const svgWidth = 600;
+  const svgHeight = height;
+  const padding = { top: 16, right: 16, bottom: 28, left: 32 };
+  const chartWidth = svgWidth - padding.left - padding.right;
+  const chartHeight = svgHeight - padding.top - padding.bottom;
+
+  const maxSessions = Math.max(...data.map((d) => Number(d.sessions || 0)), 4);
+  const yCeil = Math.ceil(maxSessions * 1.15);
+
+  const getLabelStep = (count) => {
+    if (count <= 8) return 1;
+    if (count <= 16) return 2;
+    if (count <= 35) return 5;
+    if (count <= 100) return 10;
+    return Math.ceil(count / 10);
+  };
+
+  const labelStep = getLabelStep(data.length);
+  const colWidth = chartWidth / data.length;
+  const barWidth = Math.max(Math.min(colWidth * 0.65, 24), 3);
+
+  const formatDateLabel = (dateStr) => {
+    if (!dateStr) return '';
+    if (dateStr.length > 10 && dateStr.includes(' ')) {
+      return dateStr.split(' ')[1] || dateStr;
+    }
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}`;
+    }
+    return dateStr;
+  };
+
+  const formatSeconds = (sec) => {
+    if (sec === undefined || sec === null) return '0m';
+    const hrs = Math.floor(sec / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    return `${mins}m`;
+  };
+
+  const yTicks = [
+    { value: 0, y: padding.top + chartHeight },
+    { value: Math.round(yCeil / 2), y: padding.top + chartHeight / 2 },
+    { value: yCeil, y: padding.top },
+  ];
+
+  const activeItem = hoveredIndex !== null && data[hoveredIndex] ? data[hoveredIndex] : null;
 
   return (
-    <div>
-      <div className="chart-bar-container">
+    <div
+      className="activity-chart-wrapper"
+      style={{ position: 'relative', width: '100%', userSelect: 'none' }}
+      onMouseLeave={() => setHoveredIndex(null)}
+    >
+      <svg
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
+      >
+        <defs>
+          <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="100%" stopColor="#4f46e5" />
+          </linearGradient>
+          <linearGradient id="barHoverGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#818cf8" />
+            <stop offset="100%" stopColor="#6366f1" />
+          </linearGradient>
+        </defs>
+
+        {/* Y Grid Lines */}
+        {yTicks.map((tick, i) => (
+          <g key={i}>
+            <line
+              x1={padding.left}
+              y1={tick.y}
+              x2={padding.left + chartWidth}
+              y2={tick.y}
+              stroke="rgba(226, 232, 240, 0.85)"
+              strokeDasharray={i === 0 ? 'none' : '3 3'}
+              strokeWidth="1"
+            />
+            <text
+              x={padding.left - 6}
+              y={tick.y + 4}
+              textAnchor="end"
+              fontSize="10"
+              fontWeight="600"
+              fill="var(--text-dim, #94a3b8)"
+              className="tabular-nums"
+            >
+              {tick.value}
+            </text>
+          </g>
+        ))}
+
+        {/* Bars */}
         {data.map((item, idx) => {
-          const heightPercent = Math.round(((item.sessions || 0) / maxSessions) * 100);
-          const showLabel = idx % labelStep === 0 || idx === data.length - 1;
+          const sessions = Number(item.sessions || 0);
+          const barHeight = Math.max((sessions / yCeil) * chartHeight, sessions > 0 ? 4 : 1.5);
+          const x = padding.left + idx * colWidth + (colWidth - barWidth) / 2;
+          const y = padding.top + chartHeight - barHeight;
+          const isHovered = hoveredIndex === idx;
+
           return (
-            <div key={idx} className="chart-bar-col">
-              <div
-                className="chart-bar"
-                style={{ height: `${Math.max(heightPercent, 6)}%` }}
-                title={`${item.date}: ${item.sessions} sessions (${item.active_users} active users)`}
-              ></div>
-              <span className="chart-label tabular-nums" style={{ opacity: showLabel ? 1 : 0 }}>
-                {item.date?.slice(5)}
-              </span>
-            </div>
+            <g
+              key={idx}
+              onMouseEnter={() => setHoveredIndex(idx)}
+              style={{ cursor: 'pointer' }}
+            >
+              {/* Invisible touch/hover target */}
+              <rect
+                x={padding.left + idx * colWidth}
+                y={padding.top}
+                width={colWidth}
+                height={chartHeight + padding.bottom}
+                fill="transparent"
+              />
+              {/* Visible Bar */}
+              <rect
+                x={x}
+                y={y}
+                width={barWidth}
+                height={barHeight}
+                rx={Math.min(barWidth / 2, 4)}
+                fill={isHovered ? 'url(#barHoverGradient)' : 'url(#barGradient)'}
+                opacity={hoveredIndex === null || isHovered ? 1 : 0.6}
+                style={{ transition: 'all 0.15s ease' }}
+              />
+            </g>
           );
         })}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 500 }}>
-        <span>Sessions per Day</span>
-        <span>Dates (MM-DD)</span>
-      </div>
+
+        {/* X Axis Labels */}
+        {data.map((item, idx) => {
+          const isLast = idx === data.length - 1;
+          const isStep = idx % labelStep === 0;
+          if (!isStep && (!isLast || idx % labelStep > labelStep * 0.6)) {
+            return null;
+          }
+
+          const x = padding.left + idx * colWidth + colWidth / 2;
+
+          return (
+            <text
+              key={idx}
+              x={x}
+              y={padding.top + chartHeight + 16}
+              textAnchor={idx === 0 ? 'start' : isLast ? 'end' : 'middle'}
+              fontSize="10"
+              fontWeight="600"
+              fill="var(--text-muted, #64748b)"
+              className="tabular-nums"
+            >
+              {formatDateLabel(item.date)}
+            </text>
+          );
+        })}
+      </svg>
+
+      {/* Floating Tooltip */}
+      {activeItem && hoveredIndex !== null && (
+        <div
+          className="chart-tooltip"
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: `${((padding.left + hoveredIndex * colWidth + colWidth / 2) / svgWidth) * 100}%`,
+            transform: hoveredIndex > data.length * 0.7 ? 'translateX(-100%)' : hoveredIndex < data.length * 0.3 ? 'translateX(0%)' : 'translateX(-50%)',
+            pointerEvents: 'none',
+            zIndex: 10,
+          }}
+        >
+          <div className="chart-tooltip-content">
+            <div className="tooltip-date">{activeItem.date}</div>
+            <div className="tooltip-row">
+              <span className="tooltip-dot" style={{ background: 'var(--accent-primary)' }}></span>
+              <span className="tooltip-label">Sessions:</span>
+              <span className="tooltip-value tabular-nums">{activeItem.sessions ?? 0}</span>
+            </div>
+            {activeItem.active_users !== undefined && (
+              <div className="tooltip-row">
+                <span className="tooltip-dot" style={{ background: 'var(--accent-warning)' }}></span>
+                <span className="tooltip-label">Active Users:</span>
+                <span className="tooltip-value tabular-nums">{activeItem.active_users}</span>
+              </div>
+            )}
+            {activeItem.estimated_usage_seconds !== undefined && (
+              <div className="tooltip-row">
+                <span className="tooltip-dot" style={{ background: 'var(--accent-success)' }}></span>
+                <span className="tooltip-label">Usage:</span>
+                <span className="tooltip-value tabular-nums">{formatSeconds(activeItem.estimated_usage_seconds)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -317,6 +489,14 @@ export function ActivityDistribution({ byType = {} }) {
     );
   }
 
+  const formatEventType = (type) => {
+    if (!type) return 'Unknown';
+    return type
+      .split('_')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const colorPalette = [
     '#4f46e5', // Indigo
     '#059669', // Emerald
@@ -328,19 +508,21 @@ export function ActivityDistribution({ byType = {} }) {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
       {entries.map(([type, count], idx) => {
         const percent = Math.round((count / total) * 100);
         const color = colorPalette[idx % colorPalette.length];
         return (
           <div key={type}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.3rem' }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{type}</span>
-              <span className="tabular-nums" style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', marginBottom: '0.3rem' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {formatEventType(type)}
+              </span>
+              <span className="tabular-nums" style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.78rem' }}>
                 {count} ({percent}%)
               </span>
             </div>
-            <div className="progress-bar-bg">
+            <div className="progress-bar-bg" style={{ marginTop: 0 }}>
               <div
                 className="progress-bar-fill"
                 style={{
@@ -355,4 +537,5 @@ export function ActivityDistribution({ byType = {} }) {
     </div>
   );
 }
+
 
