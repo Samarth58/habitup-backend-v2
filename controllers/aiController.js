@@ -1,5 +1,17 @@
 const { generateAIResponse } = require('../services/aiService');
 const { getAIUserContext } = require('../services/aiContextService');
+const {
+  generateConversationTitle,
+  createConversation,
+  getConversationById,
+  listConversations,
+  getConversationWithMessages,
+  deleteConversation,
+  addMessage,
+  getRecentMessagesForGemini,
+} = require('../services/aiConversationService');
+
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 10;
@@ -91,13 +103,13 @@ function validateAndSanitizeHistory(history) {
 
 /**
  * POST /ai/chat
- * Handles user chat requests to the HabitUp AI Coach by retrieving user habits/streaks context and generating an AI response.
+ * Handles user chat requests to the HabitUp AI Coach with persistent conversation history support.
  *
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
 async function handleAIChat(req, res) {
-  const { message, history } = req.body || {};
+  const { message, conversationId, history } = req.body || {};
 
   if (!message || typeof message !== 'string' || !message.trim()) {
     return res.status(400).json({ error: 'Message is required and must be a non-empty string.' });
@@ -111,18 +123,60 @@ async function handleAIChat(req, res) {
     });
   }
 
-  let sanitizedHistory;
-  try {
-    sanitizedHistory = validateAndSanitizeHistory(history);
-  } catch (validationErr) {
-    return res.status(validationErr.status || 400).json({ error: validationErr.message });
+  if (conversationId !== undefined && conversationId !== null) {
+    if (typeof conversationId !== 'string' || !UUID_REGEX.test(conversationId)) {
+      return res.status(400).json({ error: 'Invalid conversation ID format.' });
+    }
+  }
+
+  let sanitizedClientHistory = [];
+  if (history !== undefined) {
+    try {
+      sanitizedClientHistory = validateAndSanitizeHistory(history);
+    } catch (validationErr) {
+      return res.status(validationErr.status || 400).json({ error: validationErr.message });
+    }
   }
 
   try {
-    const userContext = await getAIUserContext(req.userId);
-    const reply = await generateAIResponse(trimmedMessage, userContext, sanitizedHistory);
+    let conversation;
 
-    return res.status(200).json({ reply });
+    if (conversationId) {
+      conversation = await getConversationById(req.userId, conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found.' });
+      }
+    } else {
+      const title = generateConversationTitle(trimmedMessage);
+      conversation = await createConversation(req.userId, title);
+    }
+
+    // 1. Load recent conversation history before current user message
+    let recentHistory = await getRecentMessagesForGemini(
+      conversation.id,
+      MAX_HISTORY_MESSAGES,
+      MAX_TOTAL_HISTORY_LENGTH
+    );
+
+    // If client supplied ephemeral history and DB has none yet, use client history
+    if (recentHistory.length === 0 && sanitizedClientHistory.length > 0) {
+      recentHistory = sanitizedClientHistory;
+    }
+
+    // 2. Persist user message to DB
+    await addMessage(conversation.id, 'user', trimmedMessage);
+
+    // 3. Load user context and generate AI response
+    const userContext = await getAIUserContext(req.userId);
+    const reply = await generateAIResponse(trimmedMessage, userContext, recentHistory);
+
+    // 4. Persist assistant response to DB
+    await addMessage(conversation.id, 'assistant', reply);
+
+    return res.status(200).json({
+      conversationId: conversation.id,
+      reply,
+    });
   } catch (err) {
     console.error('[aiController] Chat error:', err.message || 'Unknown error');
     const status = err.status || 500;
@@ -131,8 +185,59 @@ async function handleAIChat(req, res) {
   }
 }
 
+/**
+ * GET /ai/conversations
+ * Lists all conversations for the authenticated user.
+ */
+async function getUserConversations(req, res) {
+  try {
+    const conversations = await listConversations(req.userId);
+    return res.status(200).json({ conversations });
+  } catch (err) {
+    console.error('[getUserConversations] Error:', err.message || err);
+    return res.status(500).json({ error: 'Failed to retrieve conversations.' });
+  }
+}
+
+/**
+ * GET /ai/conversations/:conversationId
+ * Retrieves a conversation and its messages for the authenticated user.
+ */
+async function getConversationDetails(req, res) {
+  try {
+    const conversation = await getConversationWithMessages(req.userId, req.params.conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+    return res.status(200).json({ conversation });
+  } catch (err) {
+    console.error('[getConversationDetails] Error:', err.message || err);
+    return res.status(500).json({ error: 'Failed to retrieve conversation details.' });
+  }
+}
+
+/**
+ * DELETE /ai/conversations/:conversationId
+ * Deletes a conversation owned by the authenticated user.
+ */
+async function deleteUserConversation(req, res) {
+  try {
+    const deleted = await deleteConversation(req.userId, req.params.conversationId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+    return res.status(200).json({ message: 'Conversation deleted successfully.' });
+  } catch (err) {
+    console.error('[deleteUserConversation] Error:', err.message || err);
+    return res.status(500).json({ error: 'Failed to delete conversation.' });
+  }
+}
+
 module.exports = {
   handleAIChat,
+  getUserConversations,
+  getConversationDetails,
+  deleteUserConversation,
   validateAndSanitizeHistory,
   MAX_MESSAGE_LENGTH,
   MAX_HISTORY_MESSAGES,
