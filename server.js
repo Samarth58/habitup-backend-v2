@@ -69,6 +69,7 @@ app.use('/friends', require('./routes/friends'));
 app.use('/experiments', require('./routes/experiments'));
 app.use('/admin', require('./routes/admin'));
 app.use('/notifications', require('./routes/notifications'));
+app.use('/ai', require('./routes/ai'));
 app.get('/stats', requireAuth, getUserStatsHandler);
 
 const { startScheduler } = require('./services/notificationSchedulerService');
