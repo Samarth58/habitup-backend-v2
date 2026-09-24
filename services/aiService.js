@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require('@google/genai');
 
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_MODEL = 'gemini-3.1-flash-lite';
 
 const HABITUP_SYSTEM_INSTRUCTION = `You are the HabitUp AI Coach, an encouraging and practical habit assistant built into HabitUp.
 Your responsibilities:
