@@ -19,6 +19,7 @@ const {
 } = require('../services/habitService');
 const { calculateStreak } = require('../services/streakService');
 const { getHabitStats, getUserOverallStats } = require('../services/statsService');
+const { handleHabitCompletionPandaNotification } = require('../services/pandaNotificationService');
 const logActivity = (...args) => require('../services/activityService').logActivity(...args);
 
 /**
@@ -316,6 +317,14 @@ async function addHabitCompletion(req, res) {
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
     const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
+
+    // Trigger emotion-based panda notification (non-blocking, failure-safe)
+    handleHabitCompletionPandaNotification({
+      userId,
+      habitId,
+      streak,
+      timezone,
+    }).catch((err) => console.error('[pandaNotification]', err.message || err));
 
     return res.status(201).json({ completion, streak });
   } catch (err) {
