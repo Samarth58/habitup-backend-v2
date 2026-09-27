@@ -99,17 +99,49 @@ export function ExperimentsPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <div className="content-container">
-        <div style={{ padding: '5rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Loading experiment analytics…
+        <div className="toolbar" style={{ marginBottom: '1.25rem' }}>
+          <div className="toolbar-heading">
+            <h2 className="toolbar-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature Experiment
+            </h2>
+          </div>
+        </div>
+
+        <div className="overview-stack fade-in" aria-busy="true" aria-label="Loading experiment analytics">
+          <div className="glass-card">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i}>
+                  <div className="skeleton skeleton-text" style={{ width: '60%', height: '10px' }} />
+                  <div className="skeleton" style={{ width: '75%', height: '18px', marginTop: '4px', borderRadius: '4px' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="stats-grid">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="kpi-card">
+                <div className="skeleton skeleton-text" style={{ width: '50%' }} />
+                <div className="skeleton" style={{ width: '60%', height: '36px', borderRadius: '6px' }} />
+                <div className="skeleton skeleton-text" style={{ width: '40%', marginBottom: 0 }} />
+              </div>
+            ))}
+          </div>
+
+          <div className="glass-card">
+            <div className="skeleton skeleton-title" style={{ width: '30%' }} />
+            <div className="skeleton skeleton-chart" style={{ height: '180px' }} />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <div className="content-container">
         <div className="error-alert" role="alert">
@@ -146,8 +178,14 @@ export function ExperimentsPage() {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={experiment?.status} />
-          <button id="experiment-refresh-btn" className="btn-action" onClick={loadData} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem' }}>
-            <RefreshCw size={14} /> Refresh
+          <button
+            id="experiment-refresh-btn"
+            className="btn-action"
+            onClick={loadData}
+            disabled={loading}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem' }}
+          >
+            <RefreshCw size={14} className={loading ? 'spinning' : ''} /> Refresh
           </button>
         </div>
       </div>

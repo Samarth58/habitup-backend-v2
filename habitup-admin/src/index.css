@@ -42,6 +42,13 @@
   --glass-blur: blur(14px);
   --glass-blur-lg: blur(20px);
 
+  /* Emil Kowalski Motion & Micro-Interaction Tokens */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 200ms;
+  --duration-smooth: 280ms;
+
   /* High-Contrast WCAG-Conscious Slate Typography */
   --text-main: #0f172a;       /* Slate 900 */
   --text-secondary: #334155;  /* Slate 700 */
@@ -108,25 +115,46 @@ body {
 ::-webkit-scrollbar-thumb {
   background: rgba(203, 213, 225, 0.8);
   border-radius: 9999px;
+  transition: background var(--duration-fast) var(--ease-spring);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.95);
 }
 
-/* Animations */
+/* Motion & Animation Keyframes */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalDialogIn {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 @keyframes pulseGlow {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.45; transform: scale(0.9); }
+  50% { opacity: 0.45; transform: scale(0.92); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .fade-in {
-  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn var(--duration-smooth) var(--ease-spring) forwards;
 }
 
 ::selection {
@@ -139,7 +167,16 @@ button {
   cursor: pointer;
   border: none;
   outline: none;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform var(--duration-fast) var(--ease-spring),
+              background-color var(--duration-normal) var(--ease-spring),
+              box-shadow var(--duration-normal) var(--ease-spring),
+              border-color var(--duration-normal) var(--ease-spring),
+              color var(--duration-fast) var(--ease-spring);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 button:focus-visible,
@@ -166,12 +203,17 @@ input, select, textarea {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    transform: none !important;
   }
-  .heartbeat-dot {
+  .heartbeat-dot,
+  .status-ping-dot,
+  .skeleton {
     animation: none !important;
     opacity: 1 !important;
   }
-  .fade-in {
+  .fade-in,
+  .modal-backdrop,
+  .modal-content {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

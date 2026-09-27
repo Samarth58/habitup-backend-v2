@@ -54,8 +54,22 @@ export function UserDetailModal({ userId, onClose }) {
         </button>
 
         {loading ? (
-          <div style={{ padding: '3.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Loading user profile details...
+          <div aria-busy="true" aria-label="Loading user profile details">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1.25rem' }}>
+              <div className="skeleton" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
+              <div style={{ flex: 1 }}>
+                <div className="skeleton skeleton-text" style={{ width: '40%', height: '18px' }} />
+                <div className="skeleton skeleton-text" style={{ width: '25%', height: '12px', marginBottom: 0 }} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.85rem', marginBottom: '1.75rem' }}>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="neu-inset-tile">
+                  <div className="skeleton skeleton-text" style={{ width: '50%', height: '10px' }} />
+                  <div className="skeleton" style={{ width: '60%', height: '20px', marginTop: '6px', borderRadius: '4px' }} />
+                </div>
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="error-alert">{error}</div>

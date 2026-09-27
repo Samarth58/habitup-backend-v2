@@ -151,11 +151,29 @@ export function UsersPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  Loading users...
-                </td>
-              </tr>
+              [1, 2, 3, 4, 5].map((i) => (
+                <tr key={`skel-${i}`} aria-hidden="true">
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+                      <div style={{ flex: 1 }}>
+                        <div className="skeleton skeleton-text" style={{ width: '60%', height: '12px' }} />
+                        <div className="skeleton skeleton-text" style={{ width: '40%', height: '10px', marginBottom: 0 }} />
+                      </div>
+                    </div>
+                  </td>
+                  <td><div className="skeleton" style={{ width: '45px', height: '18px', borderRadius: '4px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '50px', height: '18px', borderRadius: '4px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '30px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '30px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '50px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '65px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '65px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div className="skeleton" style={{ width: '80px', height: '26px', borderRadius: '6px', marginLeft: 'auto' }} />
+                  </td>
+                </tr>
+              ))
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>

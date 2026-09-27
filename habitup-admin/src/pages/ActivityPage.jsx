@@ -214,11 +214,14 @@ export function ActivityPage() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  Loading activity...
-                </td>
-              </tr>
+              [1, 2, 3, 4, 5, 6].map((i) => (
+                <tr key={`skel-act-${i}`} aria-hidden="true">
+                  <td><div className="skeleton" style={{ width: '130px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '85px', height: '20px', borderRadius: '4px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '120px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '220px', height: '14px', borderRadius: '3px' }} /></td>
+                </tr>
+              ))
             ) : events.length === 0 ? (
               <tr>
                 <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>

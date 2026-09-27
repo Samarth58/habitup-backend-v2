@@ -59,33 +59,65 @@ export function AnalyticsPage() {
           <p className="dashboard-subtitle">In-depth engagement, usage trends, and user leaderboard</p>
         </div>
 
-        <div className="filter-group">
-          <label
-            htmlFor="analytics-period-select"
-            style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)' }}
-          >
-            Timeframe:
-          </label>
-          <select
-            id="analytics-period-select"
-            className="select-input"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-          >
-            <option value="1d">1 Day (24h)</option>
-            <option value="7d">7 Days</option>
-            <option value="30d">30 Days</option>
-            <option value="90d">90 Days</option>
-            <option value="365d">1 Year</option>
-          </select>
+        <div className="timeframe-segmented-group" role="radiogroup" aria-label="Timeframe selection">
+          {[
+            { id: '1d', label: '24h', title: '1 Day (24 hours)' },
+            { id: '7d', label: '7D', title: '7 Days' },
+            { id: '30d', label: '30D', title: '30 Days' },
+            { id: '90d', label: '90D', title: '90 Days' },
+            { id: '365d', label: '1Y', title: '1 Year' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="radio"
+              aria-checked={period === item.id}
+              className={`timeframe-pill-btn ${period === item.id ? 'active' : ''}`}
+              onClick={() => setPeriod(item.id)}
+              title={item.title}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {error && <div className="error-alert">{error}</div>}
+      {error && <div className="error-alert" role="alert">{error}</div>}
 
       {loading ? (
-        <div style={{ padding: '4rem 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-          Loading analytics...
+        <div className="overview-stack fade-in" aria-busy="true" aria-label="Loading analytics">
+          {/* Skeleton Summary Strip */}
+          <div className="saas-metric-strip">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="saas-metric-card">
+                <div className="skeleton skeleton-text" style={{ width: '45%' }} />
+                <div className="skeleton" style={{ height: '32px', width: '55%', margin: '4px 0', borderRadius: '6px' }} />
+                <div className="skeleton skeleton-text" style={{ width: '60%' }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Skeleton Charts Grid */}
+          <div className="saas-grid-2col">
+            <div className="saas-panel">
+              <div className="skeleton skeleton-title" style={{ width: '30%' }} />
+              <div className="skeleton skeleton-chart" style={{ height: '200px' }} />
+            </div>
+            <div className="saas-panel">
+              <div className="skeleton skeleton-title" style={{ width: '30%' }} />
+              <div className="skeleton skeleton-chart" style={{ height: '200px' }} />
+            </div>
+          </div>
+
+          {/* Skeleton Leaderboard */}
+          <div className="saas-panel">
+            <div className="skeleton skeleton-title" style={{ width: '25%' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="skeleton skeleton-row" />
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="overview-stack">
