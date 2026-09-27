@@ -1,17 +1,35 @@
 const { pool } = require('./db');
+const { getUserNotificationLanguage } = require('./userLanguageService');
+const translationService = require('./translationService');
+const { DEFAULT_LANGUAGE } = require('../constants/languages');
 
 /**
  * Create a new habit for a user.
+ * Automatically localizes habit name to user's preferred language if non-English.
  * @param {string} userId
  * @param {{ name: string, description?: string, icon?: string, color?: string, frequency_type: string }} data
  * @returns {Promise<object>} The created habit row.
  */
 async function createHabit(userId, { name, description = null, icon = null, color = null, frequency_type }) {
+  let habitName = name;
+
+  if (userId && name && typeof name === 'string') {
+    try {
+      const userLang = await getUserNotificationLanguage(userId);
+      if (userLang && userLang !== DEFAULT_LANGUAGE) {
+        habitName = await translationService.localizeHabitText(name, userLang);
+      }
+    } catch (err) {
+      console.warn(`[createHabit] Error resolving user language or localizing habit name:`, err.message);
+      habitName = name;
+    }
+  }
+
   const { rows } = await pool.query(
     `INSERT INTO habits (user_id, name, description, icon, color, frequency_type)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [userId, name, description, icon, color, frequency_type]
+    [userId, habitName, description, icon, color, frequency_type]
   );
   return rows[0];
 }

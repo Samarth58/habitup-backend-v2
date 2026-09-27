@@ -4,12 +4,13 @@ const { pool } = require('../services/db');
 const firebaseService = require('../services/firebaseService');
 const notificationService = require('../services/notificationService');
 const { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, isValidLanguage, normalizeLanguage } = require('../constants/languages');
-const { translate, interpolate, getLocalizedNotification, NOTIFICATION_TRANSLATIONS } = require('../services/translationService');
+const { translate, interpolate, getLocalizedNotification, NOTIFICATION_TRANSLATIONS, localizeHabitText } = require('../services/translationService');
 const { getUserNotificationLanguage, getUserLanguagePreference, updateUserLanguage } = require('../services/userLanguageService');
 const { buildMorningContent, buildAfternoonContent, buildEveningContent, getPersonalizedContent } = require('../services/personalizedNotificationService');
 const { sendFriendRequest, sendNudge } = require('../services/friendService');
 const { upsertDeviceToken } = require('../services/deviceTokenService');
 const { processSingleNotification } = require('../services/notificationSchedulerService');
+const { createHabit } = require('../services/habitService');
 
 afterEach(() => {
   mock.restoreAll();
@@ -440,6 +441,214 @@ describe('Multilingual Broadcast & No-Duplicate Delivery Verification', () => {
       'English user must receive exactly 1 broadcast, not duplicate messages'
     );
     assert.equal(messagesReceivedByEnglishUser[0].topic, 'all-users-en');
+  });
+});
+
+describe('Multilingual System — Habit Creation & Dynamic Localization', () => {
+  const userEnId = '33333333-3333-3333-3333-333333333333';
+  const userKnId = '44444444-4444-4444-4444-444444444444';
+  const userHiId = '55555555-5555-5555-5555-555555555555';
+  const userNullLangId = '66666666-6666-6666-6666-666666666666';
+
+  test('1. localizeHabitText preserves original English text when language is "en"', async () => {
+    const res = await localizeHabitText('Drink Water', 'en');
+    assert.equal(res, 'Drink Water');
+  });
+
+  test('2. localizeHabitText falls back to original text when language is invalid or unsupported', async () => {
+    const res1 = await localizeHabitText('Drink Water', 'fr');
+    assert.equal(res1, 'Drink Water');
+
+    const res2 = await localizeHabitText('Drink Water', null);
+    assert.equal(res2, 'Drink Water');
+
+    const res3 = await localizeHabitText('', 'kn');
+    assert.equal(res3, '');
+  });
+
+  test('3. localizeHabitText gracefully falls back to original text when GEMINI_API_KEY is missing', async () => {
+    const originalKey = process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    try {
+      const res = await localizeHabitText('Drink Water', 'kn');
+      assert.equal(res, 'Drink Water');
+    } finally {
+      if (originalKey) process.env.GEMINI_API_KEY = originalKey;
+    }
+  });
+
+  test('4. English user creating habit preserves original English name', async () => {
+    let insertedName = null;
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'en' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertedName = params[1];
+        return {
+          rows: [{
+            id: 'habit-en-1',
+            user_id: userEnId,
+            name: params[1],
+            description: params[2],
+            icon: params[3],
+            color: params[4],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const habit = await createHabit(userEnId, {
+      name: 'Drink Water',
+      description: '2 liters per day',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(insertedName, 'Drink Water');
+    assert.equal(habit.name, 'Drink Water');
+  });
+
+  test('5. Kannada user creating habit localizes name to Kannada', async () => {
+    let insertedName = null;
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertedName = params[1];
+        return {
+          rows: [{
+            id: 'habit-kn-1',
+            user_id: userKnId,
+            name: params[1],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    // Mock translation service for Kannada
+    const translationService = require('../services/translationService');
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'Drink Water' && lang === 'kn') {
+        return 'ನೀರು ಕುಡಿಯಿರಿ';
+      }
+      return text;
+    });
+
+    const habit = await createHabit(userKnId, {
+      name: 'Drink Water',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(localizeMock.mock.callCount(), 1);
+    assert.equal(insertedName, 'ನೀರು ಕುಡಿಯಿರಿ');
+    assert.equal(habit.name, 'ನೀರು ಕುಡಿಯಿರಿ');
+  });
+
+  test('6. Another supported-language user (Hindi) creates habit localized to Hindi', async () => {
+    let insertedName = null;
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'hi' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertedName = params[1];
+        return {
+          rows: [{
+            id: 'habit-hi-1',
+            user_id: userHiId,
+            name: params[1],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const translationService = require('../services/translationService');
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'Morning Walk' && lang === 'hi') {
+        return 'सुबह की सैर';
+      }
+      return text;
+    });
+
+    const habit = await createHabit(userHiId, {
+      name: 'Morning Walk',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(localizeMock.mock.callCount(), 1);
+    assert.equal(insertedName, 'सुबह की सैर');
+    assert.equal(habit.name, 'सुबह की सैर');
+  });
+
+  test('7. Missing or null preferred_language falls back safely to English', async () => {
+    let insertedName = null;
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: null }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertedName = params[1];
+        return {
+          rows: [{
+            id: 'habit-null-1',
+            user_id: userNullLangId,
+            name: params[1],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const habit = await createHabit(userNullLangId, {
+      name: 'Read 10 Pages',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(insertedName, 'Read 10 Pages');
+    assert.equal(habit.name, 'Read 10 Pages');
+  });
+
+  test('8. Translation failure / exception does not break habit creation and falls back safely', async () => {
+    let insertedName = null;
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'te' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertedName = params[1];
+        return {
+          rows: [{
+            id: 'habit-fallback-1',
+            user_id: '77777777-7777-7777-7777-777777777777',
+            name: params[1],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const translationService = require('../services/translationService');
+    mock.method(translationService, 'localizeHabitText', async () => {
+      throw new Error('Gemini upstream network timeout');
+    });
+
+    const habit = await createHabit('77777777-7777-7777-7777-777777777777', {
+      name: 'Evening Stretch',
+      frequency_type: 'daily',
+    });
+
+    // Successfully created despite translation service failure
+    assert.equal(insertedName, 'Evening Stretch');
+    assert.equal(habit.name, 'Evening Stretch');
   });
 });
 

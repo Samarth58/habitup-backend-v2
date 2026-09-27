@@ -539,6 +539,18 @@ function translate(key, lang = DEFAULT_LANGUAGE, params = {}) {
   return interpolate(template, params);
 }
 
+const LANGUAGE_NAMES = Object.freeze({
+  en: 'English',
+  hi: 'Hindi',
+  te: 'Telugu',
+  ta: 'Tamil',
+  kn: 'Kannada',
+  ml: 'Malayalam',
+  bn: 'Bengali',
+  mr: 'Marathi',
+  gu: 'Gujarati',
+});
+
 /**
  * Convenience helper to retrieve both title and body translations for a given notification key prefix.
  *
@@ -553,9 +565,79 @@ function getLocalizedNotification(prefix, lang = DEFAULT_LANGUAGE, params = {}) 
   return { title, body };
 }
 
+/**
+ * Localizes a habit name or text to the target language.
+ *
+ * Rules:
+ * 1. If language is 'en' or invalid, returns original text.
+ * 2. If text is empty or non-string, returns original text.
+ * 3. Uses Gemini AI model (via @google/genai) to translate the habit name into the target language accurately.
+ * 4. If GEMINI_API_KEY is not configured or any error/quota issue occurs, gracefully falls back to the original text.
+ * 5. Habit creation is NEVER failed due to translation errors.
+ *
+ * @param {string} text - The input habit name
+ * @param {string} targetLang - The user's target preferred language
+ * @returns {Promise<string>} Translated habit name or original text fallback
+ */
+async function localizeHabitText(text, targetLang) {
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return text;
+  }
+
+  const normalizedLang = normalizeLanguage(targetLang);
+  if (normalizedLang === DEFAULT_LANGUAGE) {
+    return text.trim();
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || !apiKey.trim()) {
+    return text.trim();
+  }
+
+  try {
+    const { GoogleGenAI } = require('@google/genai');
+    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+    const targetLangName = LANGUAGE_NAMES[normalizedLang] || normalizedLang;
+
+    const prompt = `You are a translation assistant for a habit tracking application.
+Translate the following habit title or action phrase from English to ${targetLangName} (${normalizedLang}).
+Rules:
+- Provide ONLY the direct, natural translation of the habit name in ${targetLangName} script.
+- Do NOT include markdown, quotation marks, transliteration, explanations, punctuation, or extra text.
+- Preserve the concise habit name meaning (e.g., "Drink Water" -> "ನೀರು ಕುಡಿಯಿರಿ" in Kannada, "पानी पिएं" in Hindi).
+
+Habit name: "${text.trim()}"`;
+
+    const generatePromise = ai.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: prompt,
+    });
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Translation request timed out after 2500ms')), 2500);
+    });
+
+    const response = await Promise.race([generatePromise, timeoutPromise]);
+
+    const translated = response?.text?.trim();
+    if (translated) {
+      const cleaned = translated.replace(/^["'`]+|["'`]+$/g, '').trim();
+      if (cleaned.length > 0) {
+        return cleaned;
+      }
+    }
+    return text.trim();
+  } catch (err) {
+    console.warn(`[translationService] Failed to localize habit name "${text}" to "${targetLang}":`, err.message);
+    return text.trim();
+  }
+}
+
 module.exports = {
   NOTIFICATION_TRANSLATIONS,
+  LANGUAGE_NAMES,
   interpolate,
   translate,
   getLocalizedNotification,
+  localizeHabitText,
 };
