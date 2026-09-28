@@ -298,6 +298,56 @@ const options = {
             },
           },
         },
+        BambooWallet: {
+          type: 'object',
+          properties: {
+            balance: { type: 'integer', example: 100 },
+            total_earned: { type: 'integer', example: 100 },
+            total_spent: { type: 'integer', example: 0 },
+          },
+        },
+        ShopItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'detective' },
+            name: { type: 'string', example: 'Detective Cap' },
+            category: { type: 'string', enum: ['hat', 'glasses', 'special'], example: 'hat' },
+            price: { type: 'integer', example: 60 },
+            icon: { type: 'string', example: '🕵️' },
+            description: { type: 'string', example: 'Investigating missing habits!' },
+            rarity: { type: 'string', enum: ['common', 'rare', 'epic', 'legendary'], example: 'rare' },
+            badge_color: { type: 'string', example: '#3B82F6' },
+          },
+        },
+        UserInventory: {
+          type: 'object',
+          properties: {
+            inventory: {
+              type: 'array',
+              items: { type: 'string' },
+              example: ['default_bamboo', 'detective'],
+            },
+            outfit: {
+              type: 'object',
+              properties: {
+                equipped_hat: { type: 'string', nullable: true, example: 'detective' },
+                equipped_glasses: { type: 'string', nullable: true, example: null },
+              },
+            },
+          },
+        },
+        BambooTransaction: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid' },
+            amount: { type: 'integer', example: 10 },
+            balance_after: { type: 'integer', example: 110 },
+            type: { type: 'string', example: 'HABIT_COMPLETION' },
+            reference_id: { type: 'string', example: 'completion_123_2026-09-28' },
+            description: { type: 'string', example: 'Completed habit: Morning Run' },
+            created_at: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     tags: [
@@ -305,6 +355,8 @@ const options = {
       { name: 'Users',         description: 'User profile, discovery, and search' },
       { name: 'Habits',        description: 'Habit CRUD, state management, and completions' },
       { name: 'Reminders',     description: 'Per-habit reminder management' },
+      { name: 'Rewards',       description: 'Bamboo currency balance, earnings, and ledger' },
+      { name: 'Shop',          description: 'Mascot accessories catalog, purchases, and wardrobe' },
       { name: 'Friends',       description: 'Friend requests and accepted friendships' },
       { name: 'Notifications', description: 'Push notifications and notification preferences' },
       { name: 'Stats',         description: 'Habit and user-level statistics' },

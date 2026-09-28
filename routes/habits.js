@@ -503,6 +503,8 @@ router.patch('/:id/unarchive', validateUuid('id'), unarchiveHabit);
  *                     user_id:      { type: string, format: uuid }
  *                     completed_on: { type: string, format: date, example: '2026-08-29' }
  *                 streak: { type: integer, example: 8 }
+ *                 bamboo_earned: { type: integer, example: 10 }
+ *                 current_bamboo_balance: { type: integer, example: 110 }
  *       401:
  *         description: Unauthorized
  *         content:

@@ -20,6 +20,8 @@ const {
 const { calculateStreak } = require('../services/streakService');
 const { getHabitStats, getUserOverallStats } = require('../services/statsService');
 const { handleHabitCompletionPandaNotification } = require('../services/pandaNotificationService');
+const personalizedNotificationService = require('../services/personalizedNotificationService');
+const bambooService = require('../services/bambooService');
 const logActivity = (...args) => require('../services/activityService').logActivity(...args);
 
 /**
@@ -318,6 +320,37 @@ async function addHabitCompletion(req, res) {
     const completionDates = await getCompletionDates(userId, habitId);
     const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
 
+    // 1. Award +10 Bamboo Coins for habit completion (idempotent)
+    const completionDateStr = completion.completion_date;
+    const habitRewardRes = await bambooService.addBamboo(
+      userId,
+      10,
+      'HABIT_COMPLETION',
+      `completion_${habitId}_${completionDateStr}`,
+      `Completed habit: ${habit.name}`
+    );
+
+    let bambooEarned = habitRewardRes.bamboo_earned;
+    let currentBambooBalance = habitRewardRes.current_bamboo_balance;
+
+    // 2. Check if all scheduled habits for today are now 100% completed
+    try {
+      const progress = await personalizedNotificationService.getHabitProgressForDate(userId, completionDateStr);
+      if (progress.planned > 0 && progress.remaining === 0) {
+        const bonusRes = await bambooService.addBamboo(
+          userId,
+          15,
+          'DAILY_100_BONUS',
+          `daily_bonus_${completionDateStr}`,
+          '100% daily habit perfection bonus'
+        );
+        bambooEarned += bonusRes.bamboo_earned;
+        currentBambooBalance = bonusRes.current_bamboo_balance;
+      }
+    } catch (err) {
+      console.error('[dailyBambooBonus]', err);
+    }
+
     // Trigger emotion-based panda notification (non-blocking, failure-safe)
     handleHabitCompletionPandaNotification({
       userId,
@@ -326,7 +359,12 @@ async function addHabitCompletion(req, res) {
       timezone,
     }).catch((err) => console.error('[pandaNotification]', err.message || err));
 
-    return res.status(201).json({ completion, streak });
+    return res.status(201).json({
+      completion,
+      streak,
+      bamboo_earned: bambooEarned,
+      current_bamboo_balance: currentBambooBalance,
+    });
   } catch (err) {
     console.error('[addHabitCompletion]', err);
     return res.status(500).json({ error: 'Failed to record completion.' });
