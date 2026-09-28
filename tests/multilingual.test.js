@@ -84,6 +84,16 @@ describe('Multilingual System — Central Constants & Translation Engine', () =>
       'friend_nudge_general_body',
       'streak_milestone_title',
       'streak_milestone_body',
+      'panda_happy_title',
+      'panda_happy_body',
+      'panda_celebrating_title',
+      'panda_celebrating_body',
+      'panda_encouraging_title',
+      'panda_encouraging_body',
+      'panda_excited_title',
+      'panda_excited_body',
+      'panda_sad_title',
+      'panda_sad_body',
     ];
 
     for (const lang of SUPPORTED_LANGUAGES) {
@@ -649,6 +659,56 @@ describe('Multilingual System — Habit Creation & Dynamic Localization', () => 
     // Successfully created despite translation service failure
     assert.equal(insertedName, 'Evening Stretch');
     assert.equal(habit.name, 'Evening Stretch');
+  });
+
+  test('9. Panda completion notifications produce localized FCM payloads for non-English users', async () => {
+    const { handleHabitCompletionPandaNotification } = require('../services/pandaNotificationService');
+    const deviceTokenService = require('../services/deviceTokenService');
+    const userKnId = '88888888-8888-8888-8888-888888888888';
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => true);
+    mock.method(deviceTokenService, 'getDeviceTokensByUserId', async () => [
+      { id: 1, token: 'fcm-kn-token-123', platform: 'android', timezone: 'Asia/Kolkata' },
+    ]);
+    mock.method(pool, 'query', async (q) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('SELECT COUNT(h.id)::int AS planned')) {
+        return { rows: [{ planned: 1 }] };
+      }
+      if (q.includes('SELECT COUNT(hc.id)::int AS completed')) {
+        return { rows: [{ completed: 1 }] };
+      }
+      if (q.includes('INSERT INTO notification_deliveries')) {
+        return { rows: [{ id: 'deliv-kn-1' }] };
+      }
+      if (q.includes('UPDATE notification_deliveries')) {
+        return { rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const sendMock = mock.method(notificationService, 'sendPushNotification', async () => ({
+      success: true,
+      messageId: 'msg-kn-test',
+    }));
+
+    const res = await handleHabitCompletionPandaNotification({
+      userId: userKnId,
+      habitId: 'habit-kn-1',
+      streak: 1,
+      timezone: 'Asia/Kolkata',
+    });
+
+    assert.equal(res.sent, true);
+    assert.equal(res.state, 'celebrating');
+    assert.equal(sendMock.mock.callCount(), 1);
+    const pushArg = sendMock.mock.calls[0].arguments[1];
+    assert.equal(pushArg.title, 'HabitUp');
+    assert.equal(pushArg.body, 'ಅದ್ಭುತ! ನೀವು ಇಂದು ನಿಮ್ಮ ಎಲ್ಲಾ ಅಭ್ಯಾಸಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!');
+    assert.equal(pushArg.data.type, 'panda_notification');
+    assert.equal(pushArg.data.pandaEmotion, 'celebrating');
   });
 });
 

@@ -73,6 +73,18 @@ const NOTIFICATION_TRANSLATIONS = {
     // Streak / Milestones
     streak_milestone_title: 'Streak Milestone! 🔥',
     streak_milestone_body: '{count} day streak on {habitName}! Keep the momentum going!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'Great job! You completed your habit. Keep going!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: "Amazing! You've completed all your habits for today!",
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'You still have a habit waiting for you. You can do it!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'Amazing! You reached a new streak milestone!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: "Aww... we still have some habits left today. Let's finish what we can.",
   },
 
   hi: {
@@ -127,6 +139,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'स्ट्रीक उपलब्धि! 🔥',
     streak_milestone_body: '{habitName} पर {count} दिनों की स्ट्रीक! गति बनाए रखें!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'बहुत बढ़िया! आपने अपनी आदत पूरी कर ली है। जारी रखें!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'अद्भुत! आपने आज अपनी सभी आदतें पूरी कर ली हैं!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'आपकी एक आदत अभी भी बाकी है। आप यह कर सकते हैं!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'अद्भुत! आप एक नए स्ट्रीक मील के पत्थर पर पहुंच गए हैं!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'अरे... आज अभी भी कुछ आदतें बची हैं। चलिए जो हो सके पूरा करते हैं।',
   },
 
   te: {
@@ -181,6 +205,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'స్ట్రీక్ మైలురాయి! 🔥',
     streak_milestone_body: '{habitName} పై {count} రోజుల స్ట్రీక్! అలాగే కొనసాగించండి!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'చాలా బాగుంది! మీరు మీ అలవాటును పూర్తి చేశారు. కొనసాగించండి!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'అద్భుతం! మీరు ఈ రోజు మీ అలవాట్లన్నీ పూర్తి చేశారు!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'మీ కోసం ఒక అలవాటు వేచి ఉంది. మీరు దీన్ని చేయగలరు!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'అద్భుతం! మీరు కొత్త స్ట్రీక్ మైలురాయిని చేరుకున్నారు!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'అయ్యో... ఈ రోజు ఇంకా కొన్ని అలవాట్లు మిగిలి ఉన్నాయి. వీలైనంత పూర్తి చేద్దాం.',
   },
 
   ta: {
@@ -235,6 +271,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'தொடர் மைல்கல்! 🔥',
     streak_milestone_body: '{habitName} இல் {count} நாட்கள் தொடர் சாதனை! உற்சாகத்தைத் தொடருங்கள்!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'மிக நன்று! உங்கள் பழக்கத்தை முடித்துவிட்டீர்கள். தொடருங்கள்!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'அற்புதம்! இன்று உங்கள் அனைத்து பழக்கங்களையும் முடித்துவிட்டீர்கள்!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'உங்களுக்காக ஒரு பழக்கம் காத்திருக்கிறது. உங்களால் முடியும்!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'அற்புதம்! புதிய ஸ்ட்ரீக் மைல்கல்லை அடைந்துவிட்டீர்கள்!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'அடடா... இன்று இன்னும் சில பழக்கங்கள் மீதமுள்ளன. முடிந்ததை முடிப்போம்.',
   },
 
   kn: {
@@ -289,6 +337,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'ಸ್ಟ್ರೀಕ್ ಮೈಲಿಗಲ್ಲು! 🔥',
     streak_milestone_body: '{habitName} ನಲ್ಲಿ {count} ದಿನಗಳ ಸ್ಟ್ರೀಕ್! ಮುಂದುವರಿಸಿ!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'ಉತ್ತಮ ಕೆಲಸ! ನೀವು ನಿಮ್ಮ ಅಭ್ಯಾಸವನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ಮುಂದುವರಿಸಿ!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'ಅದ್ಭುತ! ನೀವು ಇಂದು ನಿಮ್ಮ ಎಲ್ಲಾ ಅಭ್ಯಾಸಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'ನಿಮಗಾಗಿ ಒಂದು ಅಭ್ಯಾಸ ಕಾಯುತ್ತಿದೆ. ನೀವು ಇದನ್ನು ಮಾಡಬಹುದು!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'ಅದ್ಭುತ! ನೀವು ಹೊಸ ಸ್ಟ್ರೀಕ್ ಮೈಲಿಗಲ್ಲನ್ನು ತಲುಪಿದ್ದೀರಿ!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'ಅಯ್ಯೋ... ಇಂದು ಇನ್ನೂ ಕೆಲವು ಅಭ್ಯಾಸಗಳು ಉಳಿದಿವೆ. ಸಾಧ್ಯವಾದದ್ದನ್ನು ಮುಗಿಸೋಣ.',
   },
 
   ml: {
@@ -343,6 +403,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'സ്ട്രീക്ക് നാഴികക്കല്ല്! 🔥',
     streak_milestone_body: '{habitName} ൽ {count} ദിവസത്തെ സ്ട്രീക്ക്! തുടരുക!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'മികച്ച പ്രവർത്തനം! നിങ്ങൾ നിങ്ങളുടെ ശീലം പൂർത്തിയാക്കി. തുടരുക!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'അത്ഭുതകരം! ഇന്ന് നിങ്ങൾ എല്ലാ ശീലങ്ങളും പൂർത്തിയാക്കി!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'നിങ്ങൾക്കായി ഒരു ശീലം കാത്തിരിക്കുന്നു. നിങ്ങൾക്ക് ഇത് ചെയ്യാൻ കഴിയും!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'അത്ഭുതകരം! നിങ്ങൾ ഒരു പുതിയ സ്ട്രീക്ക് നാഴികക്കല്ലിലെത്തി!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'അയ്യോ... ഇന്ന് ഇനിയും ചില ശീലങ്ങൾ ബാക്കിയുണ്ട്. സാധ്യമായത് പൂർത്തിയാക്കാം.',
   },
 
   bn: {
@@ -397,6 +469,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'স্ট্রিক মাইলফলক! 🔥',
     streak_milestone_body: '{habitName}-এ {count} দিনের স্ট্রিক! গতি বজায় রাখুন!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'দারুণ কাজ! আপনি আপনার অভ্যাস সম্পন্ন করেছেন। চালিয়ে যান!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'অসাধারণ! আপনি আজকের সব অভ্যাস সম্পন্ন করেছেন!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'আপনার জন্য একটি অভ্যাস অপেক্ষা করছে। আপনি এটি করতে পারেন!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'অসাধারণ! আপনি একটি নতুন স্ট্রিক মাইলফলকে পৌঁছেছেন!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'আহা... আজকে এখনও কিছু অভ্যাস বাকি আছে। আসুন যা পারি শেষ করি।',
   },
 
   mr: {
@@ -451,6 +535,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'स्ट्रीक टप्पा! 🔥',
     streak_milestone_body: '{habitName} वर {count} दिवसांची स्ट्रीक! गती कायम ठेवा!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'उत्तम काम! तुम्ही तुमची सवय पूर्ण केली आहे. चालू ठेवा!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'अद्भुत! तुम्ही आज तुमच्या सर्व सवयी पूर्ण केल्या आहेत!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'तुमच्यासाठी एक सवय वाट पाहत आहे. तुम्ही हे करू शकता!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'अद्भुत! तुम्ही नवीन स्ट्रीकचा टप्पा गाठला आहे!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'अरेरे... आज अजूनही काही सवयी शिल्लक आहेत. शक्य तेवढ्या पूर्ण करूया.',
   },
 
   gu: {
@@ -505,6 +601,18 @@ const NOTIFICATION_TRANSLATIONS = {
 
     streak_milestone_title: 'સ્ટ્રીક સીમાચિહ્ન! 🔥',
     streak_milestone_body: '{habitName} પર {count} દિવસની સ્ટ્રીક! વેગ ચાલુ રાખો!',
+
+    // Panda Mascot Notifications
+    panda_happy_title: 'HabitUp',
+    panda_happy_body: 'ખૂબ સરસ! તમે તમારી ટેવ પૂર્ણ કરી છે. ચાલુ રાખો!',
+    panda_celebrating_title: 'HabitUp',
+    panda_celebrating_body: 'અદ્ભુત! તમે આજે તમારી બધી ટેવો પૂર્ણ કરી છે!',
+    panda_encouraging_title: 'HabitUp',
+    panda_encouraging_body: 'તમારા માટે એક ટેવ રાહ જોઈ રહી છે. તમે આ કરી શકો છો!',
+    panda_excited_title: 'HabitUp',
+    panda_excited_body: 'અદ્ભુત! તમે નવા સ્ટ્રીક સીમાચિહ્ન પર પહોંચી ગયા છો!',
+    panda_sad_title: 'HabitUp',
+    panda_sad_body: 'અરેરે... આજે હજી કેટલીક ટેવો બાકી છે. ચાલો જે થઈ શકે તે પૂર્ણ કરીએ.',
   },
 };
 

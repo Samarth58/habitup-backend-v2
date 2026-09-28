@@ -291,4 +291,86 @@ describe('Panda Notification Service Unit Tests', () => {
     assert.equal(result.reason, 'already_delivered_today');
     assert.equal(sendMock.mock.callCount(), 0, 'Does not send duplicate push');
   });
+
+  // 10. Localization tests across all supported languages
+  test('7. getPandaMessage returns localized text for all 9 supported languages and falls back to English', () => {
+    // English
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'en').body, 'Great job! You completed your habit. Keep going!');
+    assert.equal(getPandaMessage(PANDA_STATES.CELEBRATING, 'en').body, "Amazing! You've completed all your habits for today!");
+
+    // Kannada
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'kn').body, 'ಉತ್ತಮ ಕೆಲಸ! ನೀವು ನಿಮ್ಮ ಅಭ್ಯಾಸವನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ಮುಂದುವರಿಸಿ!');
+    assert.equal(getPandaMessage(PANDA_STATES.CELEBRATING, 'kn').body, 'ಅದ್ಭುತ! ನೀವು ಇಂದು ನಿಮ್ಮ ಎಲ್ಲಾ ಅಭ್ಯಾಸಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!');
+    assert.equal(getPandaMessage(PANDA_STATES.ENCOURAGING, 'kn').body, 'ನಿಮಗಾಗಿ ಒಂದು ಅಭ್ಯಾಸ ಕಾಯುತ್ತಿದೆ. ನೀವು ಇದನ್ನು ಮಾಡಬಹುದು!');
+    assert.equal(getPandaMessage(PANDA_STATES.EXCITED, 'kn').body, 'ಅದ್ಭುತ! ನೀವು ಹೊಸ ಸ್ಟ್ರೀಕ್ ಮೈಲಿಗಲ್ಲನ್ನು ತಲುಪಿದ್ದೀರಿ!');
+    assert.equal(getPandaMessage(PANDA_STATES.SAD, 'kn').body, 'ಅಯ್ಯೋ... ಇಂದು ಇನ್ನೂ ಕೆಲವು ಅಭ್ಯಾಸಗಳು ಉಳಿದಿವೆ. ಸಾಧ್ಯವಾದದ್ದನ್ನು ಮುಗಿಸೋಣ.');
+
+    // Hindi
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'hi').body, 'बहुत बढ़िया! आपने अपनी आदत पूरी कर ली है। जारी रखें!');
+    assert.equal(getPandaMessage(PANDA_STATES.CELEBRATING, 'hi').body, 'अद्भुत! आपने आज अपनी सभी आदतें पूरी कर ली हैं!');
+    assert.equal(getPandaMessage(PANDA_STATES.ENCOURAGING, 'hi').body, 'आपकी एक आदत अभी भी बाकी है। आप यह कर सकते हैं!');
+    assert.equal(getPandaMessage(PANDA_STATES.EXCITED, 'hi').body, 'अद्भुत! आप एक नए स्ट्रीक मील के पत्थर पर पहुंच गए हैं!');
+    assert.equal(getPandaMessage(PANDA_STATES.SAD, 'hi').body, 'अरे... आज अभी भी कुछ आदतें बची हैं। चलिए जो हो सके पूरा करते हैं।');
+
+    // Telugu
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'te').body, 'చాలా బాగుంది! మీరు మీ అలవాటును పూర్తి చేశారు. కొనసాగించండి!');
+    assert.equal(getPandaMessage(PANDA_STATES.CELEBRATING, 'te').body, 'అద్భుతం! మీరు ఈ రోజు మీ అలవాట్లన్నీ పూర్తి చేశారు!');
+
+    // Tamil
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'ta').body, 'மிக நன்று! உங்கள் பழக்கத்தை முடித்துவிட்டீர்கள். தொடருங்கள்!');
+
+    // Malayalam
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'ml').body, 'മികച്ച പ്രവർത്തനം! നിങ്ങൾ നിങ്ങളുടെ ശീലം പൂർത്തിയാക്കി. തുടരുക!');
+
+    // Bengali
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'bn').body, 'দারুণ কাজ! আপনি আপনার অভ্যাস সম্পন্ন করেছেন। চালিয়ে যান!');
+
+    // Marathi
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'mr').body, 'उत्तम काम! तुम्ही तुमची सवय पूर्ण केली आहे. चालू ठेवा!');
+
+    // Gujarati
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'gu').body, 'ખૂબ સરસ! તમે તમારી ટેવ પૂર્ણ કરી છે. ચાલુ રાખો!');
+
+    // Fallback for unsupported / null language
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, 'fr').body, 'Great job! You completed your habit. Keep going!');
+    assert.equal(getPandaMessage(PANDA_STATES.HAPPY, null).body, 'Great job! You completed your habit. Keep going!');
+  });
+
+  // 11. handleHabitCompletionPandaNotification queries user preferred language and sends localized FCM
+  test('8. handleHabitCompletionPandaNotification retrieves user preferred_language and sends localized FCM', async () => {
+    mock.method(firebaseService, 'isFirebaseConfigured', () => true);
+    mock.method(deviceTokenService, 'getDeviceTokensByUserId', async () => [{ token: 'fcm-token-kn' }]);
+    mock.method(personalizedNotificationService, 'getHabitProgressForDate', async () => ({
+      planned: 2,
+      completed: 1,
+      remaining: 1,
+    }));
+    mock.method(pool, 'query', async (q) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      return { rows: [] };
+    });
+    const sendMock = mock.method(notificationService, 'sendPushNotification', async () => ({
+      success: true,
+      messageId: 'msg-kn-1',
+    }));
+
+    const result = await handleHabitCompletionPandaNotification({
+      userId: '123e4567-e89b-12d3-a456-426614174000',
+      habitId: 'habit-1',
+      streak: 1,
+      timezone: 'Asia/Kolkata',
+    });
+
+    assert.equal(result.sent, true);
+    assert.equal(result.state, PANDA_STATES.HAPPY);
+    assert.equal(sendMock.mock.callCount(), 1);
+    assert.equal(
+      sendMock.mock.calls[0].arguments[1].body,
+      'ಉತ್ತಮ ಕೆಲಸ! ನೀವು ನಿಮ್ಮ ಅಭ್ಯಾಸವನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ. ಮುಂದುವರಿಸಿ!'
+    );
+    assert.equal(sendMock.mock.calls[0].arguments[1].data.type, 'panda_notification');
+    assert.equal(sendMock.mock.calls[0].arguments[1].data.pandaEmotion, 'happy');
+  });
 });

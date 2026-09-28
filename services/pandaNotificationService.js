@@ -18,6 +18,8 @@ const personalizedNotificationService = require('./personalizedNotificationServi
 const deviceTokenService = require('./deviceTokenService');
 const notificationService = require('./notificationService');
 const firebaseService = require('./firebaseService');
+const { getLocalizedNotification } = require('./translationService');
+const { getUserNotificationLanguage } = require('./userLanguageService');
 
 const PANDA_STATES = Object.freeze({
   HAPPY: 'happy',
@@ -94,12 +96,23 @@ function isStreakMilestone(streak, milestones = DEFAULT_STREAK_MILESTONES) {
 }
 
 /**
- * Retrieves the static message template for a given panda state.
+ * Retrieves the message template for a given panda state in the target language.
+ * Falls back safely to predefined English templates.
  *
- * @param {string} state - 'happy' | 'celebrating' | 'encouraging' | 'excited'
+ * @param {string} state - 'happy' | 'celebrating' | 'encouraging' | 'excited' | 'sad'
+ * @param {string} [lang='en'] - Target language code
  * @returns {{ title: string, body: string }}
  */
-function getPandaMessage(state) {
+function getPandaMessage(state, lang = 'en') {
+  try {
+    const localized = getLocalizedNotification(`panda_${state}`, lang);
+    if (localized && localized.title && localized.body) {
+      return localized;
+    }
+  } catch (err) {
+    console.warn(`[pandaNotification] Failed to localize panda message for state "${state}" in "${lang}":`, err.message);
+  }
+
   const template = PANDA_TEMPLATES[state];
   if (!template) {
     throw new Error(`Unknown panda notification state: ${state}`);
@@ -152,10 +165,11 @@ function determinePandaState({ isCompleted = false, remainingHabits, streak, isM
  *
  * @param {string} state - Panda emotion state
  * @param {Record<string, string>} [customData={}] - Optional metadata to attach
+ * @param {string} [lang='en'] - Target language code
  * @returns {{ title: string, body: string, data: Record<string, string> }}
  */
-function createPandaNotificationPayload(state, customData = {}) {
-  const message = getPandaMessage(state);
+function createPandaNotificationPayload(state, customData = {}, lang = 'en') {
+  const message = getPandaMessage(state, lang);
 
   const data = {
     type: 'panda_notification',
@@ -188,9 +202,10 @@ function createPandaNotificationPayload(state, customData = {}) {
  * @param {string} params.habitId - Completed habit UUID
  * @param {number} params.streak - Newly calculated streak
  * @param {string} [params.timezone='UTC'] - User's IANA timezone
+ * @param {string} [params.preferredLanguage] - Pre-fetched user language
  * @returns {Promise<{ sent: boolean, state?: string, reason?: string }>}
  */
-async function handleHabitCompletionPandaNotification({ userId, habitId, streak, timezone = 'UTC' }) {
+async function handleHabitCompletionPandaNotification({ userId, habitId, streak, timezone = 'UTC', preferredLanguage = null }) {
   if (!userId) {
     return { sent: false, reason: 'missing_user_id' };
   }
@@ -200,6 +215,13 @@ async function handleHabitCompletionPandaNotification({ userId, habitId, streak,
   }
 
   try {
+    // 0. Resolve user's preferred language
+    let lang = preferredLanguage;
+    if (!lang && userId) {
+      lang = await getUserNotificationLanguage(userId);
+    }
+    lang = lang || 'en';
+
     // 1. Check for active device tokens before performing progress calculations
     const deviceTokens = await deviceTokenService.getDeviceTokensByUserId(userId);
     if (!deviceTokens || deviceTokens.length === 0) {
@@ -258,11 +280,15 @@ async function handleHabitCompletionPandaNotification({ userId, habitId, streak,
       }
     }
 
-    // 5. Construct notification payload
-    const payload = createPandaNotificationPayload(pandaState, {
-      habitId,
-      streak: String(streak || 0),
-    });
+    // 5. Construct notification payload with localized message
+    const payload = createPandaNotificationPayload(
+      pandaState,
+      {
+        habitId,
+        streak: String(streak || 0),
+      },
+      lang
+    );
 
     // 6. Dispatch push to all active user device tokens
     let anySent = false;
