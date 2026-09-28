@@ -24,6 +24,7 @@ const PANDA_STATES = Object.freeze({
   CELEBRATING: 'celebrating',
   ENCOURAGING: 'encouraging',
   EXCITED: 'excited',
+  SAD: 'sad',
 });
 
 const DEFAULT_STREAK_MILESTONES = Object.freeze([3, 7, 14, 21, 30, 50, 100, 365]);
@@ -47,6 +48,10 @@ const PANDA_TEMPLATES = Object.freeze({
   [PANDA_STATES.EXCITED]: {
     title: 'HabitUp',
     body: 'Amazing! You reached a new streak milestone!',
+  },
+  [PANDA_STATES.SAD]: {
+    title: 'HabitUp',
+    body: "Aww... we still have some habits left today. Let's finish what we can.",
   },
 });
 
@@ -118,7 +123,7 @@ function getPandaMessage(state) {
  * @param {boolean} [params.isMilestone] - Explicit milestone override flag
  * @returns {string|null} The resolved panda state or null if no condition met
  */
-function determinePandaState({ isCompleted = false, remainingHabits, streak, isMilestone } = {}) {
+function determinePandaState({ isCompleted = false, remainingHabits, streak, isMilestone, notificationType } = {}) {
   if (isCompleted) {
     const milestoneReached = isMilestone !== undefined ? isMilestone : isStreakMilestone(streak);
     if (milestoneReached) {
@@ -133,6 +138,9 @@ function determinePandaState({ isCompleted = false, remainingHabits, streak, isM
   }
 
   if (typeof remainingHabits === 'number' && remainingHabits > 0) {
+    if (notificationType === 'evening') {
+      return PANDA_STATES.SAD;
+    }
     return PANDA_STATES.ENCOURAGING;
   }
 

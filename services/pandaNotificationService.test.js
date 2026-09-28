@@ -34,6 +34,9 @@ describe('Panda Notification Service Unit Tests', () => {
 
     assert.equal(PANDA_TEMPLATES[PANDA_STATES.EXCITED].title, 'HabitUp');
     assert.equal(PANDA_TEMPLATES[PANDA_STATES.EXCITED].body, 'Amazing! You reached a new streak milestone!');
+
+    assert.equal(PANDA_TEMPLATES[PANDA_STATES.SAD].title, 'HabitUp');
+    assert.equal(PANDA_TEMPLATES[PANDA_STATES.SAD].body, "Aww... we still have some habits left today. Let's finish what we can.");
   });
 
   // 2. Milestone calculations
@@ -68,9 +71,55 @@ describe('Panda Notification Service Unit Tests', () => {
     const priority3 = determinePandaState({ isCompleted: true, remainingHabits: 1, streak: 2 });
     assert.equal(priority3, PANDA_STATES.HAPPY);
 
-    // Condition 4: Incomplete habits check -> ENCOURAGING
+    // Condition 4: Incomplete habits check (daytime / default) -> ENCOURAGING
     const priority4 = determinePandaState({ isCompleted: false, remainingHabits: 2 });
     assert.equal(priority4, PANDA_STATES.ENCOURAGING);
+
+    const priority4Morning = determinePandaState({ isCompleted: false, remainingHabits: 2, notificationType: 'morning' });
+    assert.equal(priority4Morning, PANDA_STATES.ENCOURAGING);
+
+    const priority4Afternoon = determinePandaState({ isCompleted: false, remainingHabits: 2, notificationType: 'afternoon' });
+    assert.equal(priority4Afternoon, PANDA_STATES.ENCOURAGING);
+
+    // Condition 5: Incomplete habits check (evening / end-of-day) -> SAD
+    const priority5Evening = determinePandaState({ isCompleted: false, remainingHabits: 2, notificationType: 'evening' });
+    assert.equal(priority5Evening, PANDA_STATES.SAD);
+
+    // Condition 6: All completed (remaining=0) when not completed in this event -> null
+    const priority6 = determinePandaState({ isCompleted: false, remainingHabits: 0, notificationType: 'evening' });
+    assert.equal(priority6, null);
+  });
+
+  // 4. Payload validation: All data values must be strings
+  test('createPandaNotificationPayload produces valid FCM contract with all string data fields', () => {
+    const payload = createPandaNotificationPayload(PANDA_STATES.ENCOURAGING, {
+      remainingHabits: 2,
+      streak: 5,
+      plannedCount: 3,
+      completedCount: 1,
+      notificationType: 'afternoon',
+    });
+
+    assert.equal(payload.data.type, 'panda_notification');
+    assert.equal(payload.data.pandaEmotion, 'encouraging');
+    assert.equal(payload.data.remainingHabits, '2');
+    assert.equal(payload.data.streak, '5');
+    assert.equal(payload.data.plannedCount, '3');
+    assert.equal(payload.data.completedCount, '1');
+    assert.equal(payload.data.notificationType, 'afternoon');
+
+    for (const [key, val] of Object.entries(payload.data)) {
+      assert.equal(typeof val, 'string', `Field ${key} must be string for FCM compatibility`);
+    }
+
+    const sadPayload = createPandaNotificationPayload(PANDA_STATES.SAD, {
+      remainingHabits: 1,
+      streak: 0,
+      notificationType: 'evening',
+    });
+    assert.equal(sadPayload.data.type, 'panda_notification');
+    assert.equal(sadPayload.data.pandaEmotion, 'sad');
+    assert.equal(typeof sadPayload.data.remainingHabits, 'string');
   });
 
   // 4. handleHabitCompletionPandaNotification: Normal completion -> happy

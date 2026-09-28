@@ -226,14 +226,36 @@ async function getPersonalizedContent(userId, notificationType, localDate, timez
       throw new Error(`Unknown notification type: ${notificationType}`);
     }
 
-    const data = {
-      type: 'habit_progress',
+    // Determine if Panda emotion is appropriate for incomplete habits
+    const { determinePandaState } = require('./pandaNotificationService');
+    const pandaEmotion = determinePandaState({
+      isCompleted: false,
+      remainingHabits: remaining,
       notificationType,
-      localDate,
-      plannedCount: String(planned),
-      completedCount: String(completed),
-      remainingCount: String(remaining),
-    };
+    });
+
+    let data;
+    if (pandaEmotion && planned > 0 && remaining > 0) {
+      data = {
+        type: 'panda_notification',
+        pandaEmotion,
+        notificationType,
+        localDate,
+        plannedCount: String(planned),
+        completedCount: String(completed),
+        remainingCount: String(remaining),
+        remainingHabits: String(remaining),
+      };
+    } else {
+      data = {
+        type: 'habit_progress',
+        notificationType,
+        localDate,
+        plannedCount: String(planned),
+        completedCount: String(completed),
+        remainingCount: String(remaining),
+      };
+    }
 
     return { title, body, data };
   } catch (err) {
