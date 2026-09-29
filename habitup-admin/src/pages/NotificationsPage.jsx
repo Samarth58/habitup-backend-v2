@@ -245,18 +245,7 @@ export function NotificationsPage() {
         return <span className="badge-tag badge-danger">Failed</span>;
       case 'Skipped':
       case 'Skipped (No Device)':
-        return (
-          <span
-            className="badge-tag"
-            style={{
-              background: 'rgba(241, 245, 249, 0.95)',
-              color: 'var(--text-muted)',
-              border: '1px solid rgba(203, 213, 225, 0.8)',
-            }}
-          >
-            Skipped (No Device)
-          </span>
-        );
+        return <span className="badge-tag badge-neutral">Skipped (No Device)</span>;
       case 'Pending':
         return <span className="badge-tag badge-warning">Pending</span>;
       default:
@@ -266,30 +255,12 @@ export function NotificationsPage() {
 
   return (
     <div className="content-container">
-      {/* Page Header / Toolbar */}
-      <div className="toolbar">
-        <div className="toolbar-heading">
-          <h2 className="toolbar-title">Notifications</h2>
-          <p className="toolbar-subtitle">
-            Manage and monitor notifications sent to HabitUp users.
-          </p>
-        </div>
-
+      {/* Toolbar: actions */}
+      <div className="toolbar toolbar--end">
         <div className="filter-group">
           <button
             type="button"
-            className="action-btn"
-            style={{
-              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-              color: '#ffffff',
-              padding: '0.55rem 1.25rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-            }}
+            className="action-btn action-btn--primary"
             onClick={handleOpenSendModal}
           >
             <Plus size={16} aria-hidden="true" />
@@ -298,46 +269,19 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {error && <div className="error-alert">{error}</div>}
+      {error && <div className="error-alert" role="alert">{error}</div>}
 
       {/* Success Notification Alert */}
       {successToast && (
-        <div
-          className="fade-in"
-          style={{
-            background: 'var(--accent-success-light)',
-            border: '1px solid rgba(5, 150, 105, 0.25)',
-            color: 'var(--accent-success)',
-            padding: '0.8rem 1.2rem',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '0.84rem',
-            fontWeight: 600,
-            marginBottom: '1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: 'var(--neu-shadow-card)',
-          }}
-          role="status"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div className="success-alert fade-in" role="status">
+          <div className="success-alert-content">
             <CheckCircle2 size={16} aria-hidden="true" />
             <span>{successToast}</span>
           </div>
           <button
             type="button"
+            className="alert-dismiss"
             onClick={() => setSuccessToast('')}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--accent-success)',
-              fontWeight: 700,
-              fontSize: '0.95rem',
-              cursor: 'pointer',
-              padding: '0.2rem 0.4rem',
-              display: 'inline-flex',
-              alignItems: 'center',
-            }}
             aria-label="Dismiss message"
           >
             <X size={14} />
@@ -348,28 +292,28 @@ export function NotificationsPage() {
       {/* Statistics Cards */}
       <div className="stats-grid">
         <KPICard
-          title="TOTAL NOTIFICATIONS"
+          title="Total Notifications"
           value={stats.total}
           icon={<Bell size={18} color="var(--accent-primary)" />}
           badgeText="All Time"
           badgeType="info"
         />
         <KPICard
-          title="SENT"
+          title="Sent"
           value={stats.sent}
           icon={<CheckCircle2 size={18} color="var(--accent-success)" />}
           badgeText={stats.total > 0 ? `${Math.round((stats.sent / stats.total) * 100)}% Delivered` : undefined}
           badgeType="success"
         />
         <KPICard
-          title="FAILED"
+          title="Failed"
           value={stats.failed}
           icon={<AlertTriangle size={18} color="var(--accent-danger)" />}
           badgeText={stats.failed > 0 ? `${stats.failed} Errors` : undefined}
           badgeType="danger"
         />
         <KPICard
-          title="PENDING"
+          title="Pending"
           value={stats.pending}
           icon={<Clock size={18} color="var(--accent-warning)" />}
           badgeText={stats.pending > 0 ? `${stats.pending} Queued` : undefined}
@@ -377,65 +321,61 @@ export function NotificationsPage() {
         />
       </div>
 
-      {/* Search and Filters Toolbar */}
-      <div className="toolbar" style={{ marginTop: '0.5rem', marginBottom: '1.25rem' }}>
-        <div className="filter-group" style={{ flex: 1, minWidth: '280px' }}>
-          <input
-            type="text"
-            className="search-input"
-            style={{ width: '100%', maxWidth: '340px' }}
-            placeholder="Search notifications, recipient, or text..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search notifications"
-          />
+      {/* Search and Filters */}
+      <div className="filter-bar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search notifications, recipient, or text..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search notifications"
+        />
 
-          <select
-            className="select-input"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            aria-label="Filter by notification type"
+        <select
+          className="select-input"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          aria-label="Filter by notification type"
+        >
+          <option value="">All Types</option>
+          <option value="Daily Reminder">Daily Reminder</option>
+          <option value="Friend Request">Friend Request</option>
+          <option value="Friend Nudge">Friend Nudge</option>
+          <option value="Evening Reminder">Evening Reminder</option>
+          <option value="Achievement">Achievement</option>
+          <option value="System Notification">System Notification</option>
+          <option value="Direct Message">Direct Message</option>
+          <option value="motivation">Motivation</option>
+          <option value="announcement">Announcement</option>
+        </select>
+
+        <select
+          className="select-input"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          aria-label="Filter by status"
+        >
+          <option value="">All Statuses</option>
+          <option value="Sent">Sent</option>
+          <option value="Failed">Failed</option>
+          <option value="Skipped">Skipped (No Device)</option>
+          <option value="Pending">Pending</option>
+        </select>
+
+        {(searchQuery || typeFilter || statusFilter) && (
+          <button
+            type="button"
+            className="pagination-btn"
+            onClick={() => {
+              setSearchQuery('');
+              setTypeFilter('');
+              setStatusFilter('');
+            }}
           >
-            <option value="">All Types</option>
-            <option value="Daily Reminder">Daily Reminder</option>
-            <option value="Friend Request">Friend Request</option>
-            <option value="Friend Nudge">Friend Nudge</option>
-            <option value="Evening Reminder">Evening Reminder</option>
-            <option value="Achievement">Achievement</option>
-            <option value="System Notification">System Notification</option>
-            <option value="Direct Message">Direct Message</option>
-            <option value="motivation">Motivation</option>
-            <option value="announcement">Announcement</option>
-          </select>
-
-          <select
-            className="select-input"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Filter by status"
-          >
-            <option value="">All Statuses</option>
-            <option value="Sent">Sent</option>
-            <option value="Failed">Failed</option>
-            <option value="Skipped">Skipped (No Device)</option>
-            <option value="Pending">Pending</option>
-          </select>
-
-          {(searchQuery || typeFilter || statusFilter) && (
-            <button
-              type="button"
-              className="pagination-btn"
-              onClick={() => {
-                setSearchQuery('');
-                setTypeFilter('');
-                setStatusFilter('');
-              }}
-              style={{ fontWeight: 600 }}
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
+            Reset Filters
+          </button>
+        )}
       </div>
 
       {/* Notifications Table */}
@@ -454,78 +394,60 @@ export function NotificationsPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-muted)' }}>
-                  Loading real notifications history from database...
+                <td colSpan="6" className="empty-cell">
+                  <strong>Loading history</strong>
+                  <span>Fetching notification records from the database…</span>
                 </td>
               </tr>
             ) : filteredNotifications.length === 0 ? (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  {notifications.length === 0
-                    ? 'No notifications sent yet. Click "+ Send Notification" to create a notification.'
-                    : 'No notifications match the selected search or filters.'}
+                <td colSpan="6" className="empty-cell">
+                  <strong>
+                    {notifications.length === 0 ? 'No notifications yet' : 'No matches'}
+                  </strong>
+                  <span>
+                    {notifications.length === 0
+                      ? 'Use "Send Notification" to dispatch your first push message.'
+                      : 'No notifications match the current search or filters.'}
+                  </span>
                 </td>
               </tr>
             ) : (
               filteredNotifications.map((notif) => (
-                <tr key={notif.id} onClick={() => setSelectedNotification(notif)}>
+                <tr
+                  key={notif.id}
+                  className="row-clickable"
+                  onClick={() => setSelectedNotification(notif)}
+                >
                   <td>
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem' }}>
-                        {notif.title}
-                      </div>
-                      {notif.message && (
-                        <div
-                          style={{
-                            fontSize: '0.76rem',
-                            color: 'var(--text-muted)',
-                            marginTop: '0.2rem',
-                            maxWidth: '380px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {notif.message}
-                        </div>
-                      )}
-                    </div>
+                    <div className="cell-primary">{notif.title}</div>
+                    {notif.message && <div className="cell-truncate">{notif.message}</div>}
                   </td>
                   <td>
-                    <span
-                      style={{
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        color: 'var(--text-secondary)',
-                        background: 'rgba(241, 245, 249, 0.9)',
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: 'var(--radius-xs)',
-                        border: '1px solid rgba(226, 232, 240, 0.8)',
-                      }}
-                    >
-                      {notif.type}
-                    </span>
+                    <span className="badge-tag badge-neutral">{notif.type}</span>
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <span
                         className="avatar"
                         style={{
-                          width: '24px',
-                          height: '24px',
+                          width: '26px',
+                          height: '26px',
                           fontSize: '0.7rem',
-                          background: notif.recipient === 'All Users'
-                            ? 'linear-gradient(135deg, var(--accent-secondary) 0%, #0284c7 100%)'
-                            : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          background:
+                            notif.recipient === 'All Users'
+                              ? 'linear-gradient(135deg, var(--accent-secondary) 0%, #0284c7 100%)'
+                              : undefined,
                         }}
                         aria-hidden="true"
                       >
-                        {notif.recipient === 'All Users' ? <Users size={13} color="#ffffff" /> : (notif.recipient ? notif.recipient.charAt(0).toUpperCase() : 'U')}
+                        {notif.recipient === 'All Users' ? (
+                          <Users size={13} color="#ffffff" />
+                        ) : (
+                          (notif.recipient ? notif.recipient.charAt(0).toUpperCase() : 'U')
+                        )}
                       </span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.84rem' }}>
+                      <span className="cell-primary" style={{ fontSize: '0.84rem' }}>
                         {notif.recipient}
                       </span>
                     </div>
@@ -565,7 +487,6 @@ export function NotificationsPage() {
               className="pagination-btn"
               disabled={page <= 1 || loading}
               onClick={() => setPage((p) => Math.max(p - 1, 1))}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
             >
               <ChevronLeft size={16} /> Previous
             </button>
@@ -573,7 +494,6 @@ export function NotificationsPage() {
               className="pagination-btn"
               disabled={page >= pagination.totalPages || loading}
               onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
             >
               Next <ChevronRight size={16} />
             </button>
@@ -600,14 +520,11 @@ export function NotificationsPage() {
               <X size={18} />
             </button>
 
-            <div style={{ marginBottom: '1.25rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1rem' }}>
-              <h2
-                id="send-modal-title"
-                style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px' }}
-              >
+            <div className="modal-heading-row">
+              <h2 id="send-modal-title" className="modal-section-title">
                 Send Notification
               </h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+              <p className="modal-section-subtitle">
                 Dispatch a push notification via Firebase Cloud Messaging (FCM).
               </p>
             </div>
@@ -618,35 +535,9 @@ export function NotificationsPage() {
               {/* Send To Selector */}
               <div className="form-group" style={{ marginBottom: '1.25rem' }}>
                 <label className="form-label">Send To</label>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '0.75rem',
-                    background: 'var(--bg-input)',
-                    padding: '0.35rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid rgba(226, 232, 240, 0.85)',
-                    boxShadow: 'var(--neu-shadow-inset)',
-                  }}
-                >
+                <div className="segmented-control">
                   <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      padding: '0.55rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: targetMode === 'all' ? 700 : 500,
-                      color: targetMode === 'all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      background: targetMode === 'all' ? '#ffffff' : 'transparent',
-                      boxShadow: targetMode === 'all' ? 'var(--neu-shadow-btn)' : 'none',
-                      border: targetMode === 'all' ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid transparent',
-                      transition: 'all 0.18s ease',
-                    }}
+                    className={`segmented-option ${targetMode === 'all' ? 'is-active' : ''}`}
                   >
                     <input
                       type="radio"
@@ -657,7 +548,6 @@ export function NotificationsPage() {
                         setTargetMode('all');
                         setFormError('');
                       }}
-                      style={{ accentColor: 'var(--accent-primary)' }}
                     />
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       <Users size={15} /> All Users
@@ -665,22 +555,7 @@ export function NotificationsPage() {
                   </label>
 
                   <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      padding: '0.55rem 0.85rem',
-                      borderRadius: 'var(--radius-sm)',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: targetMode === 'user' ? 700 : 500,
-                      color: targetMode === 'user' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      background: targetMode === 'user' ? '#ffffff' : 'transparent',
-                      boxShadow: targetMode === 'user' ? 'var(--neu-shadow-btn)' : 'none',
-                      border: targetMode === 'user' ? '1px solid rgba(255, 255, 255, 0.95)' : '1px solid transparent',
-                      transition: 'all 0.18s ease',
-                    }}
+                    className={`segmented-option ${targetMode === 'user' ? 'is-active' : ''}`}
                   >
                     <input
                       type="radio"
@@ -691,7 +566,6 @@ export function NotificationsPage() {
                         setTargetMode('user');
                         setFormError('');
                       }}
-                      style={{ accentColor: 'var(--accent-primary)' }}
                     />
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                       <User size={15} /> Specific User
@@ -708,33 +582,14 @@ export function NotificationsPage() {
                   </label>
 
                   {selectedUser ? (
-                    <div
-                      className="neu-inset-tile"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0.75rem 1rem',
-                        background: '#ffffff',
-                        border: '1px solid rgba(79, 70, 229, 0.25)',
-                        boxShadow: 'var(--neu-shadow-btn)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div
-                          className="avatar"
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            fontSize: '0.9rem',
-                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)',
-                          }}
-                        >
+                    <div className="selected-user-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                        <div className="avatar">
                           {selectedUser.name ? selectedUser.name.charAt(0).toUpperCase() : 'U'}
                         </div>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            <span className="cell-primary" style={{ fontSize: '0.9rem' }}>
                               {selectedUser.name || 'Anonymous User'}
                             </span>
                             {selectedUser.username && (
@@ -743,9 +598,7 @@ export function NotificationsPage() {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                            {selectedUser.email}
-                          </div>
+                          <div className="cell-secondary">{selectedUser.email}</div>
                         </div>
                       </div>
 
@@ -753,7 +606,6 @@ export function NotificationsPage() {
                         type="button"
                         className="pagination-btn"
                         onClick={handleRemoveSelectedUser}
-                        style={{ fontSize: '0.75rem', padding: '0.35rem 0.75rem', fontWeight: 600 }}
                       >
                         Change
                       </button>
@@ -772,79 +624,24 @@ export function NotificationsPage() {
 
                       {/* Search Loading Indicator */}
                       {isSearchingUsers && (
-                        <div
-                          style={{
-                            fontSize: '0.78rem',
-                            color: 'var(--text-muted)',
-                            padding: '0.4rem 0.5rem',
-                            marginTop: '0.2rem',
-                          }}
-                        >
-                          Searching users...
-                        </div>
+                        <div className="search-hint">Searching users…</div>
                       )}
 
                       {/* Search Results Dropdown */}
                       {userSearchResults.length > 0 && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 4px)',
-                            left: 0,
-                            right: 0,
-                            background: '#ffffff',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid rgba(226, 232, 240, 0.9)',
-                            boxShadow: 'var(--shadow-modal)',
-                            maxHeight: '220px',
-                            overflowY: 'auto',
-                            zIndex: 50,
-                            padding: '0.35rem',
-                          }}
-                        >
+                        <div className="results-panel">
                           {userSearchResults.map((u) => (
                             <div
                               key={u.id}
+                              className="result-item"
                               onClick={() => handleSelectUser(u)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                padding: '0.6rem 0.75rem',
-                                borderRadius: 'var(--radius-sm)',
-                                cursor: 'pointer',
-                                transition: 'background 0.15s ease',
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'var(--accent-primary-light)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                              }}
                             >
-                              <div
-                                className="avatar"
-                                style={{
-                                  width: '28px',
-                                  height: '28px',
-                                  fontSize: '0.75rem',
-                                  minWidth: '28px',
-                                }}
-                              >
+                              <div className="avatar" style={{ width: '28px', height: '28px', fontSize: '0.75rem', minWidth: '28px' }}>
                                 {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                               </div>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <span
-                                    style={{
-                                      fontWeight: 700,
-                                      color: 'var(--text-main)',
-                                      fontSize: '0.84rem',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
+                              <div className="result-meta">
+                                <div className="result-name">
+                                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {u.name || 'Anonymous User'}
                                   </span>
                                   {u.username && (
@@ -853,17 +650,7 @@ export function NotificationsPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div
-                                  style={{
-                                    fontSize: '0.74rem',
-                                    color: 'var(--text-muted)',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                  }}
-                                >
-                                  {u.email}
-                                </div>
+                                <div className="result-email">{u.email}</div>
                               </div>
                             </div>
                           ))}
@@ -871,14 +658,7 @@ export function NotificationsPage() {
                       )}
 
                       {userSearchQuery.trim() && !isSearchingUsers && userSearchResults.length === 0 && (
-                        <div
-                          style={{
-                            fontSize: '0.78rem',
-                            color: 'var(--text-muted)',
-                            padding: '0.45rem 0.5rem',
-                            fontStyle: 'italic',
-                          }}
-                        >
+                        <div className="search-hint" style={{ fontStyle: 'italic' }}>
                           No users found matching "{userSearchQuery}".
                         </div>
                       )}
@@ -942,46 +722,22 @@ export function NotificationsPage() {
               </div>
 
               {/* Modal Actions */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: '0.75rem',
-                  marginTop: '1.75rem',
-                  paddingTop: '1.25rem',
-                  borderTop: '1px solid rgba(226, 232, 240, 0.7)',
-                }}
-              >
+              <div className="modal-actions">
                 <button
                   type="button"
                   className="pagination-btn"
                   onClick={handleCloseSendModal}
-                  style={{ minWidth: '90px' }}
                   disabled={submitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="action-btn"
+                  className="action-btn action-btn--primary"
                   disabled={submitting}
-                  style={{
-                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                    color: '#ffffff',
-                    padding: '0.65rem 1.35rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)',
-                    minWidth: '150px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.45rem',
-                  }}
                 >
                   <Send size={15} />
-                  <span>{submitting ? 'Sending...' : 'Send Notification'}</span>
+                  <span>{submitting ? 'Sending…' : 'Send Notification'}</span>
                 </button>
               </div>
             </form>
@@ -1008,30 +764,15 @@ export function NotificationsPage() {
               <X size={18} />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.85rem', marginBottom: '1.5rem', borderBottom: '1px solid rgba(226, 232, 240, 0.7)', paddingBottom: '1.25rem' }}>
-              <div
-                className="avatar"
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  fontSize: '1.2rem',
-                  minWidth: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                aria-hidden="true"
-              >
+            <div className="modal-identity">
+              <div className="avatar" style={{ width: '44px', height: '44px', fontSize: '1.1rem', minWidth: '44px' }} aria-hidden="true">
                 <Bell size={20} color="#ffffff" />
               </div>
-              <div>
-                <h2
-                  id="detail-modal-title"
-                  style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.3px' }}
-                >
+              <div className="modal-identity-text">
+                <h2 id="detail-modal-title" className="modal-section-title">
                   {selectedNotification.title}
                 </h2>
-                <div style={{ marginTop: '0.4rem', display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                <div className="modal-identity-badges">
                   <span className="badge-tag badge-primary">{selectedNotification.type}</span>
                   {getStatusBadge(selectedNotification.status)}
                 </div>
@@ -1040,28 +781,20 @@ export function NotificationsPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
               <div className="neu-inset-tile">
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
-                  Message Content
-                </div>
+                <div className="detail-label">Message Content</div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: 1.5 }}>
                   {selectedNotification.message || 'No additional message body provided.'}
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
+              <div className="detail-grid">
                 <div className="neu-inset-tile">
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                    Recipient
-                  </div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                    {selectedNotification.recipient}
-                  </div>
+                  <div className="detail-label">Recipient</div>
+                  <div className="detail-value">{selectedNotification.recipient}</div>
                 </div>
 
                 <div className="neu-inset-tile">
-                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
-                    Timestamp
-                  </div>
+                  <div className="detail-label">Timestamp</div>
                   <div className="tabular-nums" style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
                     {selectedNotification.sentAt}
                   </div>
@@ -1075,12 +808,11 @@ export function NotificationsPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="modal-actions">
               <button
                 type="button"
                 className="pagination-btn"
                 onClick={() => setSelectedNotification(null)}
-                style={{ fontWeight: 700, padding: '0.5rem 1.25rem' }}
               >
                 Close
               </button>

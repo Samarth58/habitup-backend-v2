@@ -6,8 +6,9 @@ export function ActivityTrendChart({ data = [], height = 220 }) {
 
   if (!data || data.length === 0) {
     return (
-      <div style={{ padding: '3.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-        No activity recorded for this period.
+      <div className="empty-state">
+        <div className="empty-state-title">No activity recorded</div>
+        <div className="empty-state-text">There is no activity data for this period.</div>
       </div>
     );
   }
@@ -270,8 +271,9 @@ export function DailyUsageChart({ data = [], height = 180 }) {
 
   if (!data || data.length === 0) {
     return (
-      <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-        No daily usage data recorded for this timeframe.
+      <div className="empty-state">
+        <div className="empty-state-title">No usage data</div>
+        <div className="empty-state-text">No daily usage was recorded for this timeframe.</div>
       </div>
     );
   }
@@ -483,8 +485,9 @@ export function ActivityDistribution({ byType = {} }) {
 
   if (total === 0) {
     return (
-      <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-        No activity distribution events recorded.
+      <div className="empty-state">
+        <div className="empty-state-title">No distribution data</div>
+        <div className="empty-state-text">No activity events were recorded for this period.</div>
       </div>
     );
   }

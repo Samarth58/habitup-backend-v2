@@ -1,8 +1,8 @@
 import React from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export function Header({ title, onToggleCollapse }) {
+export function Header({ title, description, onToggleCollapse }) {
   const { user, logout, lastHeartbeat } = useAuth();
 
   return (
@@ -18,14 +18,18 @@ export function Header({ title, onToggleCollapse }) {
             <Menu size={18} aria-hidden="true" />
           </button>
         )}
-        <h1 className="header-title">{title}</h1>
+
+        <div className="header-heading">
+          <h1 className="header-title">{title}</h1>
+          {description && <p className="header-description">{description}</p>}
+        </div>
       </div>
 
       <div className="header-actions">
         {lastHeartbeat && (
           <div className="heartbeat-badge" title="Live session heartbeat active">
             <div className="heartbeat-dot" aria-hidden="true"></div>
-            <span className="tabular-nums">Live • {lastHeartbeat}</span>
+            <span className="tabular-nums">Live &bull; {lastHeartbeat}</span>
           </div>
         )}
 
@@ -40,6 +44,7 @@ export function Header({ title, onToggleCollapse }) {
         </div>
 
         <button className="logout-btn" onClick={logout} title="Sign Out">
+          <LogOut size={15} aria-hidden="true" />
           <span>Sign Out</span>
         </button>
       </div>

@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  FlaskConical,
   RefreshCw,
   TrendingUp,
   Calculator,
@@ -56,25 +55,17 @@ function StatusBadge({ status }) {
 }
 
 function SectionTitle({ icon, children }) {
-  return (
-    <h3 style={{
-      fontSize: '1.05rem', fontWeight: 800, marginBottom: '1rem',
-      color: 'var(--text-main)', letterSpacing: '-0.2px',
-      display: 'flex', alignItems: 'center', gap: '0.5rem',
-    }}>
-      {icon} <span>{children}</span>
-    </h3>
-  );
+  return <h3 className="section-heading">{icon} <span>{children}</span></h3>;
 }
 
 function CompareRow({ label, controlVal, treatmentVal, highlight = false }) {
   return (
-    <tr style={highlight ? { background: 'var(--accent-primary-light, rgba(79,70,229,0.08))' } : {}}>
-      <td style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>{label}</td>
-      <td className="tabular-nums" style={{ color: 'var(--text-main)', fontWeight: highlight ? 800 : 600 }}>
+    <tr className={highlight ? 'row-highlight' : undefined}>
+      <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</td>
+      <td className="cell-numeric" style={{ fontWeight: highlight ? 800 : 700 }}>
         {controlVal ?? '—'}
       </td>
-      <td className="tabular-nums" style={{ color: 'var(--text-main)', fontWeight: highlight ? 800 : 600 }}>
+      <td className="cell-numeric" style={{ fontWeight: highlight ? 800 : 700 }}>
         {treatmentVal ?? '—'}
       </td>
     </tr>
@@ -102,17 +93,15 @@ export function ExperimentsPage() {
   if (loading && !data) {
     return (
       <div className="content-container">
-        <div className="toolbar" style={{ marginBottom: '1.25rem' }}>
+        <div className="toolbar">
           <div className="toolbar-heading">
-            <h2 className="toolbar-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature Experiment
-            </h2>
+            <h2 className="toolbar-title">Friends Feature Experiment</h2>
           </div>
         </div>
 
         <div className="overview-stack fade-in" aria-busy="true" aria-label="Loading experiment analytics">
           <div className="glass-card">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+            <div className="stat-grid">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i}>
                   <div className="skeleton skeleton-text" style={{ width: '60%', height: '10px' }} />
@@ -167,73 +156,90 @@ export function ExperimentsPage() {
   const significantClass = comparison?.significant ? 'badge-success' : 'badge-warning';
   const significantLabel = comparison?.significant ? 'Significant' : 'Not Significant';
 
+  const experimentFacts = [
+    { label: 'Experiment', value: experiment?.name, mono: true },
+    { label: 'Allocation', value: `Control ${controlAlloc}% / Treatment ${treatmentAlloc}%` },
+    { label: 'Primary Metric', value: experiment?.primaryMetric?.replace('_', ' ') },
+    { label: 'Target Sample', value: `${experiment?.targetSampleSize ?? '—'} / variant` },
+    {
+      label: 'Started',
+      value: experiment?.startAt ? new Date(experiment.startAt).toLocaleDateString() : '—',
+    },
+    { label: 'Total Assigned', value: (control?.users || 0) + (treatment?.users || 0) },
+  ];
+
+  const significanceStats = [
+    { label: 'Control D7 Retention', value: pct(comparison.controlValue) },
+    { label: 'Treatment D7 Retention', value: pct(comparison.treatmentValue) },
+    { label: 'Absolute Lift', value: lift(comparison.absoluteLift) },
+    { label: 'Relative Lift', value: relativeLift(comparison.relativeLift) },
+    { label: 'Z-Score', value: comparison.zScore?.toFixed(3) ?? '—' },
+    { label: 'p-value', value: fmtPValue(comparison.pValue) },
+    { label: '95% Confidence Interval', value: fmtCI(comparison.confidenceInterval) },
+    {
+      label: 'Statistical Significance',
+      value: <span className={`badge-tag ${significantClass}`}>{significantLabel}</span>,
+    },
+  ];
+
+  const friendStats = [
+    { label: 'Exposure Count', value: friends?.exposureCount ?? 0 },
+    { label: 'Exposure Rate', value: pct(friends?.exposureRate) },
+    { label: 'Friend Requests Sent', value: friends?.requestsSent ?? 0 },
+    { label: 'Request Send Rate', value: pct(friends?.requestSentRate) },
+    { label: 'Requests Accepted', value: friends?.requestsAccepted ?? 0 },
+    { label: 'Acceptance Rate', value: pct(friends?.requestAcceptanceRate) },
+    { label: 'Users with ≥1 Friend', value: friends?.usersWithFriends ?? 0 },
+    { label: 'Users with Friends Rate', value: pct(friends?.usersWithFriendsRate) },
+    { label: 'Avg Friends per User', value: friends?.avgFriendsPerUser?.toFixed(2) ?? '—' },
+  ];
+
   return (
     <div className="content-container">
-      {/* ─── Header ─────────────────────────────────────────────────────── */}
-      <div className="toolbar" style={{ marginBottom: '1.25rem' }}>
+      {/* Header */}
+      <div className="toolbar">
         <div className="toolbar-heading">
-          <h2 className="toolbar-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FlaskConical size={20} color="var(--accent-primary)" /> Friends Feature Experiment
-          </h2>
+          <h2 className="toolbar-title">Friends Feature Experiment</h2>
+          <p className="toolbar-subtitle">
+            Variant A: friends disabled &middot; Variant B: friends enabled
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="filter-group">
           <StatusBadge status={experiment?.status} />
           <button
             id="experiment-refresh-btn"
-            className="btn-action"
+            className="action-btn"
             onClick={loadData}
             disabled={loading}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem' }}
           >
-            <RefreshCw size={14} className={loading ? 'spinning' : ''} /> Refresh
+            <RefreshCw size={14} className={loading ? 'spinning' : ''} aria-hidden="true" /> Refresh
           </button>
         </div>
       </div>
 
-      {/* ─── Allocation & Status Banner ──────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>EXPERIMENT</div>
-            <div style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '0.82rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-              {experiment?.name}
+      {/* Allocation & status banner */}
+      <div className="glass-card fade-in" style={{ marginBottom: '1.15rem' }}>
+        <div className="stat-grid">
+          {experimentFacts.map((fact) => (
+            <div key={fact.label}>
+              <div className="stat-tile-label">{fact.label}</div>
+              <div
+                className="stat-tile-value"
+                style={
+                  fact.mono
+                    ? { fontFamily: 'var(--font-mono)', fontSize: '0.82rem', color: 'var(--accent-primary)' }
+                    : undefined
+                }
+              >
+                {fact.value}
+              </div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>ALLOCATION</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem' }}>
-              Control {controlAlloc}% / Treatment {treatmentAlloc}%
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>PRIMARY METRIC</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem', textTransform: 'uppercase' }}>
-              {experiment?.primaryMetric?.replace('_', ' ')}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>TARGET SAMPLE</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.88rem' }}>
-              {experiment?.targetSampleSize ?? '—'} / variant
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>STARTED</div>
-            <div style={{ fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.84rem' }}>
-              {experiment?.startAt ? new Date(experiment.startAt).toLocaleDateString() : '—'}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.6px', marginBottom: '4px' }}>TOTAL ASSIGNED</div>
-            <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '1.05rem' }}>
-              {(control?.users || 0) + (treatment?.users || 0)}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {/* ─── KPI Cards ───────────────────────────────────────────────────── */}
-      <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
+      {/* KPI cards */}
+      <div className="stats-grid">
         <KPICard
           title="Control Users"
           value={control?.users ?? 0}
@@ -266,55 +272,44 @@ export function ExperimentsPage() {
         />
       </div>
 
-      {/* ─── Statistical Analysis ─────────────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
-        <SectionTitle icon={<Calculator size={18} color="var(--accent-primary)" />}>Statistical Significance (D7 Retention)</SectionTitle>
+      {/* Statistical analysis */}
+      <div className="glass-card fade-in" style={{ marginBottom: '1.15rem' }}>
+        <SectionTitle icon={<Calculator size={18} color="var(--accent-primary)" />}>
+          Statistical Significance (D7 Retention)
+        </SectionTitle>
 
         {!comparison?.hasSufficientData ? (
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: '0.6rem',
-            background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.25)',
-            borderRadius: '10px', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.85rem',
-          }}>
+          <div className="inline-warning">
             <AlertTriangle size={16} color="var(--accent-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               <strong>Insufficient data:</strong> {comparison?.verdict || 'Collecting sample data.'}
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-            {[
-              { label: 'Control D7 Retention', value: pct(comparison.controlValue) },
-              { label: 'Treatment D7 Retention', value: pct(comparison.treatmentValue) },
-              { label: 'Absolute Lift', value: lift(comparison.absoluteLift) },
-              { label: 'Relative Lift', value: relativeLift(comparison.relativeLift) },
-              { label: 'Z-Score', value: comparison.zScore?.toFixed(3) ?? '—' },
-              { label: 'p-value', value: fmtPValue(comparison.pValue) },
-              { label: '95% Confidence Interval', value: fmtCI(comparison.confidenceInterval) },
-              { label: 'Statistical Significance', value: <span className={`badge-tag ${significantClass}`}>{comparison.significant ? 'Significant' : 'Not Significant'}</span> },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ padding: '0.75rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                  {label.toUpperCase()}
-                </div>
-                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{value}</div>
+          <div className="stat-grid">
+            {significanceStats.map(({ label, value }) => (
+              <div key={label} className="stat-tile">
+                <div className="stat-tile-label">{label}</div>
+                <div className="stat-tile-value">{value}</div>
               </div>
             ))}
           </div>
         )}
 
         {comparison?.verdict && comparison?.hasSufficientData && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginTop: '0.85rem', padding: '0.75rem 0.9rem', background: 'rgba(79,70,229,0.06)', borderRadius: '8px', fontSize: '0.84rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+          <div className="inline-note">
             <FileText size={15} color="var(--accent-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>{comparison.verdict}</div>
           </div>
         )}
       </div>
 
-      {/* ─── Retention Comparison Table ───────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
-        <SectionTitle icon={<BarChart3 size={18} color="var(--accent-primary)" />}>Cohort Retention</SectionTitle>
-        <div className="table-container">
+      {/* Cohort retention */}
+      <div className="glass-card fade-in" style={{ marginBottom: '1.15rem' }}>
+        <SectionTitle icon={<BarChart3 size={18} color="var(--accent-primary)" />}>
+          Cohort Retention
+        </SectionTitle>
+        <div className="table-container" style={{ boxShadow: 'none' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -330,34 +325,36 @@ export function ExperimentsPage() {
             </thead>
             <tbody>
               <tr>
-                <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  <span className="badge-tag badge-info" style={{ marginRight: '0.4rem', fontWeight: 700 }}>A</span> Control
+                <td className="cell-primary">
+                  <span className="badge-tag badge-info" style={{ marginRight: '0.4rem' }}>A</span>
+                  Control
                 </td>
-                <td className="tabular-nums" style={{ fontWeight: 700 }}>{control?.users ?? 0}</td>
+                <td className="cell-numeric">{control?.users ?? 0}</td>
                 <td className="tabular-nums">{control?.d1Eligible ?? 0}</td>
                 <td className="tabular-nums">{control?.d1Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-primary, #4f46e5)' }}>
+                <td className="cell-numeric" style={{ color: 'var(--accent-primary)' }}>
                   {pct(control?.d1Retention)}
                 </td>
                 <td className="tabular-nums">{control?.d7Eligible ?? 0}</td>
                 <td className="tabular-nums">{control?.d7Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-primary, #4f46e5)' }}>
+                <td className="cell-numeric" style={{ color: 'var(--accent-primary)' }}>
                   {pct(control?.d7Retention)}
                 </td>
               </tr>
-              <tr style={{ background: 'var(--accent-primary-light, rgba(79,70,229,0.04))' }}>
-                <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                  <span className="badge-tag badge-success" style={{ marginRight: '0.4rem', fontWeight: 700 }}>B</span> Treatment
+              <tr className="row-highlight">
+                <td className="cell-primary">
+                  <span className="badge-tag badge-success" style={{ marginRight: '0.4rem' }}>B</span>
+                  Treatment
                 </td>
-                <td className="tabular-nums" style={{ fontWeight: 700 }}>{treatment?.users ?? 0}</td>
+                <td className="cell-numeric">{treatment?.users ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d1Eligible ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d1Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success, #059669)' }}>
+                <td className="cell-numeric" style={{ color: 'var(--accent-success)' }}>
                   {pct(treatment?.d1Retention)}
                 </td>
                 <td className="tabular-nums">{treatment?.d7Eligible ?? 0}</td>
                 <td className="tabular-nums">{treatment?.d7Retained ?? 0}</td>
-                <td className="tabular-nums" style={{ fontWeight: 800, color: 'var(--accent-success, #059669)' }}>
+                <td className="cell-numeric" style={{ color: 'var(--accent-success)' }}>
                   {pct(treatment?.d7Retention)}
                 </td>
               </tr>
@@ -366,10 +363,12 @@ export function ExperimentsPage() {
         </div>
       </div>
 
-      {/* ─── Habit Engagement ─────────────────────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
-        <SectionTitle icon={<CheckCircle2 size={18} color="var(--accent-success)" />}>Habit Engagement</SectionTitle>
-        <div className="table-container">
+      {/* Habit engagement */}
+      <div className="glass-card fade-in" style={{ marginBottom: '1.15rem' }}>
+        <SectionTitle icon={<CheckCircle2 size={18} color="var(--accent-success)" />}>
+          Habit Engagement
+        </SectionTitle>
+        <div className="table-container" style={{ boxShadow: 'none' }}>
           <table className="data-table">
             <thead>
               <tr>
@@ -388,31 +387,27 @@ export function ExperimentsPage() {
         </div>
       </div>
 
-      {/* ─── Friends Engagement (Treatment) ──────────────────────────────── */}
-      <div className="glass-card fade-in" style={{ marginBottom: '1.25rem' }}>
-        <SectionTitle icon={<Users size={18} color="var(--accent-primary)" />}>Friends Engagement (Variant B)</SectionTitle>
+      {/* Friends engagement */}
+      <div className="glass-card fade-in">
+        <SectionTitle icon={<Users size={18} color="var(--accent-primary)" />}>
+          Friends Engagement (Variant B)
+        </SectionTitle>
         {(treatment?.users ?? 0) === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '1rem 0' }}>
-            No Treatment users assigned yet.
+          <div className="empty-state">
+            <div className="empty-state-icon">
+              <Users size={20} />
+            </div>
+            <div className="empty-state-title">No treatment users yet</div>
+            <div className="empty-state-text">
+              No users have been assigned to Variant B for this experiment.
+            </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.85rem' }}>
-            {[
-              { label: 'Exposure Count', value: friends?.exposureCount ?? 0 },
-              { label: 'Exposure Rate', value: pct(friends?.exposureRate) },
-              { label: 'Friend Requests Sent', value: friends?.requestsSent ?? 0 },
-              { label: 'Request Send Rate', value: pct(friends?.requestSentRate) },
-              { label: 'Requests Accepted', value: friends?.requestsAccepted ?? 0 },
-              { label: 'Acceptance Rate', value: pct(friends?.requestAcceptanceRate) },
-              { label: 'Users with ≥1 Friend', value: friends?.usersWithFriends ?? 0 },
-              { label: 'Users with Friends Rate', value: pct(friends?.usersWithFriendsRate) },
-              { label: 'Avg Friends per User', value: friends?.avgFriendsPerUser?.toFixed(2) ?? '—' },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ padding: '0.75rem', background: 'var(--neutral-input, #f8fafc)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                  {label.toUpperCase()}
-                </div>
-                <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.95rem' }}>{value}</div>
+          <div className="stat-grid">
+            {friendStats.map(({ label, value }) => (
+              <div key={label} className="stat-tile">
+                <div className="stat-tile-label">{label}</div>
+                <div className="stat-tile-value">{value}</div>
               </div>
             ))}
           </div>

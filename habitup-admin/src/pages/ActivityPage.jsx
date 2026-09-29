@@ -80,28 +80,22 @@ export function formatActivityDetails(activityType, metadata) {
   }
 }
 
-function renderUserCell(ev) {
+function UserCell({ ev }) {
   if (!ev.user_id) {
-    return <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>System</span>;
+    return <span className="cell-muted" style={{ fontWeight: 600 }}>System</span>;
   }
-  if (ev.user_name && ev.user_username) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
-        <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.84rem' }}>{ev.user_name}</span>
-        <span style={{ fontSize: '0.74rem', color: 'var(--accent-primary)', fontWeight: 600 }}>@{ev.user_username}</span>
-      </div>
-    );
-  }
-  if (ev.user_name) {
-    return <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.84rem' }}>{ev.user_name}</span>;
-  }
-  if (ev.user_username) {
-    return <span style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '0.84rem' }}>@{ev.user_username}</span>;
-  }
-  if (ev.user_email) {
-    return <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.82rem' }}>{ev.user_email}</span>;
-  }
-  return <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.84rem' }}>{ev.user_display || 'User'}</span>;
+
+  const primary = ev.user_name || ev.user_display || ev.user_username || ev.user_email || 'User';
+  const secondary = ev.user_username
+    ? `@${ev.user_username}`
+    : ev.user_email || null;
+
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="cell-primary">{primary}</div>
+      {secondary && <div className="cell-secondary">{secondary}</div>}
+    </div>
+  );
 }
 
 export function ActivityPage() {
@@ -126,7 +120,7 @@ export function ActivityPage() {
       userId: userFilter.trim() || undefined,
     })
       .then((res) => {
-        setEvents(res.events || []);
+        setEvents(res.events || res.activities || []);
         if (res.pagination) {
           setPagination(res.pagination);
         }
@@ -163,87 +157,91 @@ export function ActivityPage() {
 
   return (
     <div className="content-container">
-      {/* Toolbar */}
-      <div className="toolbar">
-        <div className="toolbar-heading">
-          <h2 className="toolbar-title">Activity</h2>
-        </div>
+      {/* Filter bar */}
+      <form onSubmit={handleSearch} className="filter-bar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search by user name, email or @username..."
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          aria-label="Search user"
+        />
+        <button type="submit" className="pagination-btn">
+          <Filter size={14} aria-hidden="true" /> Filter
+        </button>
 
-        <form onSubmit={handleSearch} className="filter-group">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search user..."
-            value={userFilter}
-            onChange={(e) => setUserFilter(e.target.value)}
-            aria-label="Search user"
-          />
-          <button type="submit" className="pagination-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
-            <Filter size={14} /> Filter
-          </button>
+        <span className="filter-divider" aria-hidden="true" />
 
-          <select
-            className="select-input"
-            value={activityType}
-            onChange={(e) => { setActivityType(e.target.value); setPage(1); }}
-            aria-label="Filter by event type"
-          >
-            <option value="">All Types</option>
-            <option value="LOGIN">LOGIN</option>
-            <option value="REGISTER">REGISTER</option>
-            <option value="HABIT_CREATED">HABIT_CREATED</option>
-            <option value="HABIT_COMPLETED">HABIT_COMPLETED</option>
-            <option value="HABIT_UPDATED">HABIT_UPDATED</option>
-            <option value="HABIT_DELETED">HABIT_DELETED</option>
-          </select>
-        </form>
-      </div>
+        <select
+          className="select-input"
+          value={activityType}
+          onChange={(e) => { setActivityType(e.target.value); setPage(1); }}
+          aria-label="Filter by event type"
+        >
+          <option value="">All Types</option>
+          <option value="LOGIN">LOGIN</option>
+          <option value="REGISTER">REGISTER</option>
+          <option value="HABIT_CREATED">HABIT_CREATED</option>
+          <option value="HABIT_COMPLETED">HABIT_COMPLETED</option>
+          <option value="HABIT_UPDATED">HABIT_UPDATED</option>
+          <option value="HABIT_DELETED">HABIT_DELETED</option>
+        </select>
+      </form>
 
-      {error && <div className="error-alert">{error}</div>}
+      {error && <div className="error-alert" role="alert">{error}</div>}
 
-      {/* Activity Table */}
+      {/* Activity table */}
       <div className="table-container fade-in">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Activity Type</th>
               <th>User</th>
+              <th>Activity</th>
               <th>Details</th>
+              <th style={{ textAlign: 'right' }}>Timestamp</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               [1, 2, 3, 4, 5, 6].map((i) => (
                 <tr key={`skel-act-${i}`} aria-hidden="true">
-                  <td><div className="skeleton" style={{ width: '130px', height: '14px', borderRadius: '3px' }} /></td>
-                  <td><div className="skeleton" style={{ width: '85px', height: '20px', borderRadius: '4px' }} /></td>
-                  <td><div className="skeleton" style={{ width: '120px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div className="skeleton" style={{ width: '120px', height: '14px', borderRadius: '3px' }} />
+                    </div>
+                  </td>
+                  <td><div className="skeleton" style={{ width: '85px', height: '20px', borderRadius: '999px' }} /></td>
                   <td><div className="skeleton" style={{ width: '220px', height: '14px', borderRadius: '3px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '130px', height: '14px', borderRadius: '3px', marginLeft: 'auto' }} /></td>
                 </tr>
               ))
             ) : events.length === 0 ? (
               <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  No activity found.
+                <td colSpan="4" className="empty-cell">
+                  <strong>No activity found</strong>
+                  <span>No events match the current filters.</span>
                 </td>
               </tr>
             ) : (
               events.map((ev) => (
                 <tr key={ev.id}>
-                  <td className="tabular-nums" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {new Date(ev.created_at).toLocaleString()}
+                  <td>
+                    <UserCell ev={ev} />
                   </td>
                   <td>
                     <span className={`badge-tag badge-${getBadgeStyle(ev.activity_type)}`}>
                       {ev.activity_type}
                     </span>
                   </td>
-                  <td>
-                    {renderUserCell(ev)}
-                  </td>
-                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                  <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                     {formatActivityDetails(ev.activity_type, ev.metadata)}
+                  </td>
+                  <td
+                    className="tabular-nums cell-muted"
+                    style={{ textAlign: 'right', whiteSpace: 'nowrap' }}
+                  >
+                    {ev.created_at ? new Date(ev.created_at).toLocaleString() : '—'}
                   </td>
                 </tr>
               ))
@@ -252,10 +250,11 @@ export function ActivityPage() {
         </table>
       </div>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       <div className="pagination">
         <span>
-          Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total)
+          Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong>{' '}
+          ({pagination.total} total)
         </span>
 
         <div className="filter-group">
@@ -263,18 +262,16 @@ export function ActivityPage() {
             className="pagination-btn"
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            <ChevronLeft size={16} /> Previous
+            <ChevronLeft size={16} aria-hidden="true" /> Previous
           </button>
 
           <button
             className="pagination-btn"
             disabled={page >= pagination.totalPages || loading}
             onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            Next <ChevronRight size={16} />
+            Next <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
       </div>

@@ -33,15 +33,32 @@ async function main() {
       console.log('Successfully updated user to admin:');
       console.log(updateRes.rows[0]);
     } else {
+      const username = process.argv[5] || 'samarth';
       // User does not exist, insert new admin user
       const insertRes = await pool.query(
-        `INSERT INTO users (name, email, password_hash, role, timezone)
-         VALUES ($1, $2, $3, 'admin', 'UTC')
-         RETURNING id, name, email, role, created_at`,
-        [name, email, password_hash]
+        `INSERT INTO users (name, email, username, password_hash, role, timezone, preferred_language)
+         VALUES ($1, $2, $3, $4, 'admin', 'UTC', 'en')
+         RETURNING id, name, email, username, role, created_at`,
+        [name, email, username, password_hash]
       );
+      const newAdmin = insertRes.rows[0];
+      
+      // Initialize bamboo wallet and notification preferences
+      await pool.query(
+        `INSERT INTO user_bamboo_wallets (user_id, balance, total_earned, total_spent)
+         VALUES ($1, 500, 500, 0)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [newAdmin.id]
+      );
+      await pool.query(
+        `INSERT INTO notification_preferences (user_id, timezone)
+         VALUES ($1, 'UTC')
+         ON CONFLICT (user_id) DO NOTHING`,
+        [newAdmin.id]
+      );
+
       console.log('Successfully created admin user:');
-      console.log(insertRes.rows[0]);
+      console.log(newAdmin);
     }
   } catch (err) {
     console.error('Error creating/updating admin user:', err);

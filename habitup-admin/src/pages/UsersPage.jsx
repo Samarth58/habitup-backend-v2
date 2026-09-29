@@ -66,74 +66,72 @@ export function UsersPage() {
 
   return (
     <div className="content-container">
-      {/* Toolbar */}
-      <div className="toolbar">
-        <div className="toolbar-heading">
-          <h2 className="toolbar-title">Users</h2>
-        </div>
+      {/* Filter bar */}
+      <form onSubmit={handleSearchSubmit} className="filter-bar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder="Search by email or @username..."
+          value={emailSearch}
+          onChange={(e) => setEmailSearch(e.target.value)}
+          aria-label="Search by email or username"
+        />
+        <button type="submit" className="pagination-btn">
+          <Search size={14} aria-hidden="true" /> Search
+        </button>
 
-        <form onSubmit={handleSearchSubmit} className="filter-group">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search email or @username..."
-            value={emailSearch}
-            onChange={(e) => setEmailSearch(e.target.value)}
-            aria-label="Search by email or username"
-          />
-          <button type="submit" className="pagination-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
-            <Search size={14} /> Search
-          </button>
+        <span className="filter-divider" aria-hidden="true" />
 
-          <select
-            className="select-input"
-            value={roleFilter}
-            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-            aria-label="Filter by role"
-          >
-            <option value="">All Roles</option>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
+        <select
+          className="select-input"
+          value={roleFilter}
+          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+          aria-label="Filter by role"
+        >
+          <option value="">All Roles</option>
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
 
-          <select
-            className="select-input"
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-            aria-label="Filter by account status"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="deleted">Deleted</option>
-          </select>
+        <select
+          className="select-input"
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          aria-label="Filter by account status"
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="deleted">Deleted</option>
+        </select>
 
-          <select
-            className="select-input"
-            value={sortField}
-            onChange={(e) => setSortField(e.target.value)}
-            aria-label="Sort by field"
-          >
-            <option value="created_at">Created Date</option>
-            <option value="username">Username</option>
-            <option value="email">Email</option>
-            <option value="last_activity">Last Activity</option>
-          </select>
+        <span className="filter-divider" aria-hidden="true" />
 
-          <select
-            className="select-input"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            aria-label="Sort order"
-          >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
-          </select>
-        </form>
-      </div>
+        <select
+          className="select-input"
+          value={sortField}
+          onChange={(e) => setSortField(e.target.value)}
+          aria-label="Sort by field"
+        >
+          <option value="created_at">Sort: Created Date</option>
+          <option value="username">Sort: Username</option>
+          <option value="email">Sort: Email</option>
+          <option value="last_activity">Sort: Last Activity</option>
+        </select>
 
-      {error && <div className="error-alert">{error}</div>}
+        <select
+          className="select-input"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          aria-label="Sort order"
+        >
+          <option value="desc">Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </form>
 
-      {/* Users Data Table */}
+      {error && <div className="error-alert" role="alert">{error}</div>}
+
+      {/* Users table */}
       <div className="table-container fade-in">
         <table className="data-table">
           <thead>
@@ -162,8 +160,8 @@ export function UsersPage() {
                       </div>
                     </div>
                   </td>
-                  <td><div className="skeleton" style={{ width: '45px', height: '18px', borderRadius: '4px' }} /></td>
-                  <td><div className="skeleton" style={{ width: '50px', height: '18px', borderRadius: '4px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '45px', height: '18px', borderRadius: '999px' }} /></td>
+                  <td><div className="skeleton" style={{ width: '50px', height: '18px', borderRadius: '999px' }} /></td>
                   <td><div className="skeleton" style={{ width: '30px', height: '14px', borderRadius: '3px' }} /></td>
                   <td><div className="skeleton" style={{ width: '30px', height: '14px', borderRadius: '3px' }} /></td>
                   <td><div className="skeleton" style={{ width: '50px', height: '14px', borderRadius: '3px' }} /></td>
@@ -176,28 +174,25 @@ export function UsersPage() {
               ))
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '3.5rem', color: 'var(--text-dim)' }}>
-                  No users found matching filters.
+                <td colSpan="9" className="empty-cell">
+                  <strong>No users found</strong>
+                  <span>No accounts match the current search or filters.</span>
                 </td>
               </tr>
             ) : (
               users.map((u) => (
-                <tr key={u.id} onClick={() => setSelectedUserId(u.id)}>
+                <tr key={u.id} className="row-clickable" onClick={() => setSelectedUserId(u.id)}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                       <div className="avatar" aria-hidden="true">
                         {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
                       </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.name}</span>
-                          {u.username && (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 600 }}>
-                              @{u.username}
-                            </span>
-                          )}
+                      <div style={{ minWidth: 0 }}>
+                        <div className="cell-primary">{u.name || 'Unnamed user'}</div>
+                        <div className="cell-secondary">
+                          {u.username ? `@${u.username} · ` : ''}
+                          {u.email}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>{u.email}</div>
                       </div>
                     </div>
                   </td>
@@ -211,14 +206,16 @@ export function UsersPage() {
                       {u.status || (u.deleted_at ? 'deleted' : 'active')}
                     </span>
                   </td>
-                  <td className="tabular-nums" style={{ fontWeight: 700 }}>{u.total_habits ?? 0}</td>
-                  <td className="tabular-nums" style={{ fontWeight: 700 }}>{u.total_completions ?? 0}</td>
-                  <td className="tabular-nums" style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{formatDuration(u.estimated_usage_seconds)}</td>
-                  <td className="tabular-nums" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{new Date(u.created_at).toLocaleDateString()}</td>
-                  <td className="tabular-nums" style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                    {u.last_activity_at
-                      ? new Date(u.last_activity_at).toLocaleDateString()
-                      : '—'}
+                  <td className="cell-numeric">{u.total_habits ?? 0}</td>
+                  <td className="cell-numeric">{u.total_completions ?? 0}</td>
+                  <td className="tabular-nums" style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {formatDuration(u.estimated_usage_seconds)}
+                  </td>
+                  <td className="tabular-nums cell-muted" style={{ whiteSpace: 'nowrap' }}>
+                    {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="tabular-nums cell-muted" style={{ whiteSpace: 'nowrap' }}>
+                    {u.last_activity_at ? new Date(u.last_activity_at).toLocaleDateString() : '—'}
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <button
@@ -238,10 +235,11 @@ export function UsersPage() {
         </table>
       </div>
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       <div className="pagination">
         <span>
-          Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong> ({pagination.total} total)
+          Page <strong>{pagination.page}</strong> of <strong>{pagination.totalPages}</strong>{' '}
+          ({pagination.total} total)
         </span>
 
         <div className="filter-group">
@@ -249,18 +247,16 @@ export function UsersPage() {
             className="pagination-btn"
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            <ChevronLeft size={16} /> Previous
+            <ChevronLeft size={16} aria-hidden="true" /> Previous
           </button>
 
           <button
             className="pagination-btn"
             disabled={page >= pagination.totalPages || loading}
             onClick={() => setPage((p) => Math.min(p + 1, pagination.totalPages))}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
           >
-            Next <ChevronRight size={16} />
+            Next <ChevronRight size={16} aria-hidden="true" />
           </button>
         </div>
       </div>
