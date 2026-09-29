@@ -89,6 +89,22 @@ async function updateUserLanguage(userId, rawLanguage) {
 
   const newLanguage = normalizeLanguage(rows[0].preferred_language);
 
+  // Re-localize the user's active habits to the new language.
+  // Failure-isolated: a translation provider failure must never fail the
+  // language change itself, and never rolls back preferred_language.
+  if (oldLanguage !== newLanguage) {
+    try {
+      // Required lazily: habitService depends on this module (no import cycle).
+      const { retranslateUserHabitNames } = require('./habitService');
+      await retranslateUserHabitNames(userId, newLanguage);
+    } catch (retranslateErr) {
+      console.error(
+        `[updateUserLanguage] Failed to retranslate habit names for user ${userId}:`,
+        retranslateErr.message
+      );
+    }
+  }
+
   // If language changed, migrate FCM device token subscriptions
   if (oldLanguage !== newLanguage && firebaseService.isFirebaseConfigured()) {
     try {

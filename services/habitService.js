@@ -1,10 +1,11 @@
 const { pool } = require('./db');
 const { getUserNotificationLanguage } = require('./userLanguageService');
 const translationService = require('./translationService');
-const { DEFAULT_LANGUAGE } = require('../constants/languages');
+const { DEFAULT_LANGUAGE, normalizeLanguage } = require('../constants/languages');
 
 /**
  * Create a new habit for a user.
+ * Stores the raw user input in original_name and the localized display text in name.
  * Automatically localizes habit name to user's preferred language if non-English.
  * @param {string} userId
  * @param {{ name: string, description?: string, icon?: string, color?: string, frequency_type: string }} data
@@ -26,10 +27,10 @@ async function createHabit(userId, { name, description = null, icon = null, colo
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO habits (user_id, name, description, icon, color, frequency_type)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO habits (user_id, name, description, icon, color, frequency_type, original_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [userId, habitName, description, icon, color, frequency_type]
+    [userId, habitName, description, icon, color, frequency_type, name]
   );
   return rows[0];
 }
@@ -69,17 +70,52 @@ async function getHabitById(userId, habitId) {
 
 /**
  * Partially update a habit belonging to a user.
+ * When the name changes, original_name is replaced with the raw input and name is
+ * re-localized from that input using the user's current preferred language.
  * @param {string} userId
  * @param {string} habitId
  * @param {object} fields Key-value pairs to update.
  * @returns {Promise<object|null>} The updated habit row or null if not found.
  */
 async function updateHabit(userId, habitId, fields) {
-  const allowedFields = ['name', 'description', 'icon', 'color', 'frequency_type', 'paused_at', 'archived_at'];
+  const allowedFields = ['description', 'icon', 'color', 'frequency_type', 'paused_at', 'archived_at'];
   const setClauses = [];
   const queryParams = [habitId, userId];
 
+  if (Object.prototype.hasOwnProperty.call(fields, 'name')) {
+    const current = await getHabitById(userId, habitId);
+    if (!current) {
+      return null;
+    }
+
+    const suppliedName = fields.name;
+    const currentOriginalName = current.original_name ?? current.name;
+    const nameChanged =
+      String(suppliedName) !== String(current.name) &&
+      String(suppliedName) !== String(currentOriginalName);
+
+    if (nameChanged) {
+      let localizedName = suppliedName;
+      try {
+        const userLang = await getUserNotificationLanguage(userId);
+        if (userLang && userLang !== DEFAULT_LANGUAGE) {
+          localizedName = await translationService.localizeHabitText(suppliedName, userLang);
+        }
+      } catch (err) {
+        console.warn(`[updateHabit] Error localizing habit name:`, err.message);
+        localizedName = suppliedName;
+      }
+      if (typeof localizedName !== 'string' || !localizedName.trim()) {
+        localizedName = suppliedName;
+      }
+
+      queryParams.push(localizedName, suppliedName);
+      setClauses.push(`name = $${queryParams.length - 1}, original_name = $${queryParams.length}`);
+    }
+  }
+
   for (const [key, value] of Object.entries(fields)) {
+    if (key === 'name') continue;
     if (allowedFields.includes(key)) {
       queryParams.push(value);
       setClauses.push(`${key} = $${queryParams.length}`);
@@ -406,12 +442,114 @@ async function getArchivedHabitsForUser(userId) {
   return rows;
 }
 
+/**
+ * Re-localizes every active habit (not deleted, not archived) for a user to the
+ * target language, always translating from original_name — never from the
+ * currently localized name. Failures are isolated per habit so a translation
+ * provider issue never corrupts stored names or fails the caller.
+ *
+ * Each UPDATE is guarded so an older translation pass cannot overwrite a habit
+ * renamed concurrently or a newer preferred_language selection.
+ *
+ * @param {string} userId
+ * @param {string} targetLanguage - Normalized 2-letter language code.
+ * @returns {Promise<{ updated: number }>} Count of habits whose name changed.
+ */
+async function retranslateUserHabitNames(userId, targetLanguage) {
+  const language = normalizeLanguage(targetLanguage);
+
+  const { rows: habits } = await pool.query(
+    `SELECT id, name, COALESCE(original_name, name) AS original_name
+     FROM habits
+     WHERE user_id = $1
+       AND deleted_at IS NULL
+       AND archived_at IS NULL`,
+    [userId]
+  );
+
+  if (habits.length === 0) {
+    return { updated: 0 };
+  }
+
+  const results = await Promise.allSettled(
+    habits.map(async (habit) => {
+      const source = habit.original_name;
+      let localizedName;
+
+      if (language === DEFAULT_LANGUAGE) {
+        localizedName = source;
+      } else {
+        try {
+          localizedName = await translationService.localizeHabitText(source, language);
+        } catch (err) {
+          console.warn(
+            `[retranslateUserHabitNames] Translation to "${language}" failed for habit ${habit.id}; preserving current name:`,
+            err.message
+          );
+          return { id: habit.id, updated: false };
+        }
+
+        if (typeof localizedName !== 'string' || !localizedName.trim()) {
+          console.warn(
+            `[retranslateUserHabitNames] Empty translation to "${language}" for habit ${habit.id}; preserving current name`
+          );
+          return { id: habit.id, updated: false };
+        }
+
+        if (localizedName.trim() === String(source).trim()) {
+          console.warn(
+            `[retranslateUserHabitNames] Translation to "${language}" for habit ${habit.id} matched source text; preserving current name`
+          );
+          return { id: habit.id, updated: false };
+        }
+      }
+
+      if (localizedName === habit.name) {
+        return { id: habit.id, updated: false };
+      }
+
+      const { rowCount } = await pool.query(
+        `UPDATE habits
+         SET name = $3, updated_at = NOW()
+         WHERE id = $1
+           AND user_id = $2
+           AND deleted_at IS NULL
+           AND archived_at IS NULL
+           AND COALESCE(original_name, name) = $4
+           AND EXISTS (
+             SELECT 1 FROM users u
+             WHERE u.id = $2 AND u.preferred_language = $5
+           )`,
+        [habit.id, userId, localizedName, source, language]
+      );
+
+      return { id: habit.id, updated: rowCount > 0 };
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.warn(
+        `[retranslateUserHabitNames] Unexpected error retranslating a habit for user ${userId}:`,
+        result.reason?.message ?? result.reason
+      );
+    }
+  }
+
+  const updated = results.filter(
+    (result) => result.status === 'fulfilled' && result.value.updated
+  ).length;
+
+  return { updated };
+}
+
 module.exports = {
   createHabit,
   getHabitsForUser,
   getArchivedHabitsForUser,
   getHabitById,
   updateHabit,
+  retranslateUserHabitNames,
   softDeleteHabit,
   pauseHabit,
   unpauseHabit,

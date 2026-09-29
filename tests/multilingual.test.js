@@ -10,7 +10,7 @@ const { buildMorningContent, buildAfternoonContent, buildEveningContent, getPers
 const { sendFriendRequest, sendNudge } = require('../services/friendService');
 const { upsertDeviceToken } = require('../services/deviceTokenService');
 const { processSingleNotification } = require('../services/notificationSchedulerService');
-const { createHabit } = require('../services/habitService');
+const { createHabit, updateHabit } = require('../services/habitService');
 
 afterEach(() => {
   mock.restoreAll();
@@ -709,6 +709,448 @@ describe('Multilingual System — Habit Creation & Dynamic Localization', () => 
     assert.equal(pushArg.body, 'ಅದ್ಭುತ! ನೀವು ಇಂದು ನಿಮ್ಮ ಎಲ್ಲಾ ಅಭ್ಯಾಸಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ!');
     assert.equal(pushArg.data.type, 'panda_notification');
     assert.equal(pushArg.data.pandaEmotion, 'celebrating');
+  });
+});
+
+describe('Multilingual System — original_name Preservation & Language-Change Retranslation', () => {
+  const translationService = require('../services/translationService');
+  const habitUserId = '99999999-4444-4444-4444-444444444444';
+
+  test('A. New habit in English: original_name preserved, name correct, no provider call', async () => {
+    let insertParams = null;
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text) => text);
+
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'en' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertParams = params;
+        return {
+          rows: [{
+            id: 'habit-a-1',
+            user_id: habitUserId,
+            name: params[1],
+            original_name: params[6],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const habit = await createHabit(habitUserId, {
+      name: 'Morning Run',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(habit.name, 'Morning Run');
+    assert.equal(habit.original_name, 'Morning Run');
+    assert.equal(insertParams[1], 'Morning Run');
+    assert.equal(insertParams[6], 'Morning Run');
+    assert.equal(localizeMock.mock.callCount(), 0, 'English habit must not call the translation provider');
+  });
+
+  test('B. New habit in non-English language: original_name stays raw input, name is localized', async () => {
+    let insertParams = null;
+
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('INSERT INTO habits')) {
+        insertParams = params;
+        return {
+          rows: [{
+            id: 'habit-b-1',
+            user_id: habitUserId,
+            name: params[1],
+            original_name: params[6],
+            frequency_type: params[5],
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'Morning Run' && lang === 'kn') {
+        return 'ಬೆಳಿಗ್ಗೆ ಓಟ';
+      }
+      return text;
+    });
+
+    const habit = await createHabit(habitUserId, {
+      name: 'Morning Run',
+      frequency_type: 'daily',
+    });
+
+    assert.equal(habit.original_name, 'Morning Run');
+    assert.equal(habit.name, 'ಬೆಳಿಗ್ಗೆ ಓಟ');
+    assert.equal(insertParams[6], 'Morning Run', 'original_name must store raw user input');
+    assert.equal(insertParams[1], 'ಬೆಳಿಗ್ಗೆ ಓಟ', 'name must store the localized text');
+    assert.equal(localizeMock.mock.callCount(), 1);
+    assert.deepEqual(localizeMock.mock.calls[0].arguments, ['Morning Run', 'kn']);
+  });
+
+  test('C. Changing preferred language retranslates active habits from original_name', async () => {
+    let selectHabitsQuery = '';
+    let updateHabitsQuery = '';
+    let updateHabitsParams = null;
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'en' }] };
+      }
+      if (q.includes('UPDATE users')) {
+        return { rows: [{ preferred_language: params[0] }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        selectHabitsQuery = q;
+        return { rows: [{ id: 'habit-c-1', name: 'Morning Run', original_name: 'Morning Run' }] };
+      }
+      if (q.includes('UPDATE habits') && q.includes('COALESCE(original_name, name) = $4')) {
+        updateHabitsQuery = q;
+        updateHabitsParams = params;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'Morning Run' && lang === 'kn') {
+        return 'ಬೆಳಿಗ್ಗೆ ಓಟ';
+      }
+      return text;
+    });
+
+    const result = await updateUserLanguage(habitUserId, 'kn');
+
+    assert.deepEqual(result, { language: 'kn' });
+    assert.equal(localizeMock.mock.callCount(), 1);
+    assert.deepEqual(localizeMock.mock.calls[0].arguments, ['Morning Run', 'kn']);
+
+    assert.ok(selectHabitsQuery.includes('user_id = $1'), 'retranslation must scope to the user');
+    assert.ok(selectHabitsQuery.includes('deleted_at IS NULL'), 'deleted habits must be excluded');
+    assert.ok(selectHabitsQuery.includes('archived_at IS NULL'), 'archived habits must be excluded');
+
+    assert.ok(updateHabitsParams, 'habits.name must be updated after language change');
+    assert.equal(updateHabitsParams[0], 'habit-c-1');
+    assert.equal(updateHabitsParams[1], habitUserId);
+    assert.equal(updateHabitsParams[2], 'ಬೆಳಿಗ್ಗೆ ಓಟ', 'name updated to new language');
+    assert.equal(updateHabitsParams[3], 'Morning Run', 'original_name is the translation source and is preserved');
+    assert.equal(updateHabitsParams[4], 'kn');
+    assert.ok(updateHabitsQuery.includes('deleted_at IS NULL'), 'update must not touch deleted habits');
+    assert.ok(updateHabitsQuery.includes('archived_at IS NULL'), 'update must not touch archived habits');
+    assert.ok(updateHabitsQuery.includes('preferred_language = $5'), 'update guarded against a newer language selection');
+  });
+
+  test('D. Multiple language changes (en -> kn -> hi) always translate from original_name, never chained', async () => {
+    const habitRow = { id: 'habit-d-1', name: 'Morning Run', original_name: 'Morning Run' };
+    const localizedNames = {
+      en: 'Morning Run',
+      kn: 'ಬೆಳಿಗ್ಗೆ ಓಟ',
+      hi: 'सुबह दौड़',
+    };
+    let currentLang = 'en';
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: currentLang }] };
+      }
+      if (q.includes('UPDATE users')) {
+        currentLang = params[0];
+        return { rows: [{ preferred_language: currentLang }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        return { rows: [{ ...habitRow }] };
+      }
+      if (q.includes('UPDATE habits') && q.includes('COALESCE(original_name, name) = $4')) {
+        habitRow.name = params[2];
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      return localizedNames[lang] ?? text;
+    });
+
+    const first = await updateUserLanguage(habitUserId, 'kn');
+    const second = await updateUserLanguage(habitUserId, 'hi');
+
+    assert.deepEqual(first, { language: 'kn' });
+    assert.deepEqual(second, { language: 'hi' });
+    assert.equal(localizeMock.mock.callCount(), 2);
+
+    assert.equal(localizeMock.mock.calls[0].arguments[0], 'Morning Run', 'first pass translates from original_name');
+    assert.equal(localizeMock.mock.calls[1].arguments[0], 'Morning Run', 'second pass still translates from original_name');
+    assert.equal(localizeMock.mock.calls[0].arguments[1], 'kn');
+    assert.equal(localizeMock.mock.calls[1].arguments[1], 'hi');
+    assert.equal(habitRow.name, 'सुबह दौड़', 'display name ends up in the latest language');
+    assert.equal(habitRow.original_name, 'Morning Run', 'original_name never changes across language switches');
+  });
+
+  test('E. Habit name update: original_name changes and name is localized with current language', async () => {
+    let updateQuery = '';
+    let updateParams = null;
+
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('FROM habits') && q.includes('WHERE id = $1 AND user_id = $2')) {
+        return {
+          rows: [{
+            id: 'habit-e-1',
+            user_id: habitUserId,
+            name: 'ಹಳೆಯ ಹೆಸರು',
+            original_name: 'Old Habit Name',
+            frequency_type: 'daily',
+          }],
+        };
+      }
+      if (q.includes('UPDATE habits')) {
+        updateQuery = q;
+        updateParams = params;
+        return {
+          rowCount: 1,
+          rows: [{
+            id: 'habit-e-1',
+            user_id: habitUserId,
+            name: params[2],
+            original_name: params[3],
+            frequency_type: 'daily',
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'New Habit Name' && lang === 'kn') {
+        return 'ಹೊಸ ಹೆಸರು';
+      }
+      return text;
+    });
+
+    const updated = await updateHabit(habitUserId, 'habit-e-1', {
+      name: 'New Habit Name',
+      color: '#e74c3c',
+    });
+
+    assert.equal(localizeMock.mock.callCount(), 1);
+    assert.deepEqual(localizeMock.mock.calls[0].arguments, ['New Habit Name', 'kn']);
+    assert.ok(updateQuery.includes('original_name = $4'), 'rename must write original_name');
+    assert.equal(updateParams[0], 'habit-e-1');
+    assert.equal(updateParams[1], habitUserId);
+    assert.equal(updateParams[2], 'ಹೊಸ ಹೆಸರು', 'name localized from the new input');
+    assert.equal(updateParams[3], 'New Habit Name', 'original_name stores the new raw input');
+    assert.equal(updateParams[4], '#e74c3c');
+    assert.equal(updated.name, 'ಹೊಸ ಹೆಸರು');
+    assert.equal(updated.original_name, 'New Habit Name');
+  });
+
+  test('E2. Habit update without a name change does not retranslate the name', async () => {
+    let updateQuery = '';
+    let updateCount = 0;
+
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('UPDATE habits')) {
+        updateCount += 1;
+        updateQuery = q;
+        return {
+          rowCount: 1,
+          rows: [{
+            id: 'habit-e2-1',
+            user_id: habitUserId,
+            name: 'ಬೆಳಿಗ್ಗೆ ಓಟ',
+            original_name: 'Morning Run',
+            color: params ? params[2] : null,
+            frequency_type: 'daily',
+          }],
+        };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text) => text);
+
+    const updated = await updateHabit(habitUserId, 'habit-e2-1', { color: '#123456' });
+
+    assert.equal(localizeMock.mock.callCount(), 0, 'no name change means no provider call');
+    assert.equal(updateCount, 1);
+    assert.ok(!updateQuery.includes('original_name'), 'original_name must not be rewritten');
+    assert.ok(!updateQuery.includes('SET name'), 'name must not be rewritten');
+    assert.equal(updated.name, 'ಬೆಳಿಗ್ಗೆ ಓಟ');
+    assert.equal(updated.original_name, 'Morning Run');
+  });
+
+  test('E3. Habit update with an unchanged name does not retranslate', async () => {
+    let updateCount = 0;
+
+    mock.method(pool, 'query', async (q) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('FROM habits') && q.includes('WHERE id = $1 AND user_id = $2')) {
+        return {
+          rows: [{
+            id: 'habit-e3-1',
+            user_id: habitUserId,
+            name: 'ಹೊಸ ಹೆಸರು',
+            original_name: 'New Habit Name',
+            frequency_type: 'daily',
+          }],
+        };
+      }
+      if (q.includes('UPDATE habits')) {
+        updateCount += 1;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text) => text);
+
+    const habit = await updateHabit(habitUserId, 'habit-e3-1', { name: 'New Habit Name' });
+
+    assert.equal(localizeMock.mock.callCount(), 0, 'unchanged name must not trigger translation');
+    assert.equal(updateCount, 0, 'unchanged name must not rewrite the habit');
+    assert.equal(habit.name, 'ಹೊಸ ಹೆಸರು');
+    assert.equal(habit.original_name, 'New Habit Name');
+  });
+
+  test('F. Archived and deleted habits are never retranslated', async () => {
+    let selectHabitsQuery = '';
+    let updateCount = 0;
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'en' }] };
+      }
+      if (q.includes('UPDATE users')) {
+        return { rows: [{ preferred_language: params[0] }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        selectHabitsQuery = q;
+        return { rows: [] };
+      }
+      if (q.includes('UPDATE habits')) {
+        updateCount += 1;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text) => text);
+
+    const result = await updateUserLanguage(habitUserId, 'kn');
+
+    assert.deepEqual(result, { language: 'kn' });
+    assert.equal(updateCount, 0, 'no active habits means nothing is rewritten');
+    assert.equal(localizeMock.mock.callCount(), 0);
+    assert.ok(selectHabitsQuery.includes('user_id = $1'), 'scoped to a single user');
+    assert.ok(selectHabitsQuery.includes('deleted_at IS NULL'), 'deleted habits excluded');
+    assert.ok(selectHabitsQuery.includes('archived_at IS NULL'), 'archived habits excluded');
+    assert.ok(!selectHabitsQuery.includes('paused_at'), 'paused habits remain eligible for retranslation');
+  });
+
+  test('G. Translation provider failure does not fail the language change or corrupt habit names', async () => {
+    let updateHabitCount = 0;
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'en' }] };
+      }
+      if (q.includes('UPDATE users')) {
+        return { rows: [{ preferred_language: params[0] }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        return { rows: [{ id: 'habit-g-1', name: 'Morning Run', original_name: 'Morning Run' }] };
+      }
+      if (q.includes('UPDATE habits')) {
+        updateHabitCount += 1;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async () => {
+      throw new Error('Gemini provider unavailable');
+    });
+
+    const result = await updateUserLanguage(habitUserId, 'kn');
+
+    assert.deepEqual(result, { language: 'kn' }, 'language change must succeed despite provider failure');
+    assert.equal(localizeMock.mock.callCount(), 1, 'translation was attempted');
+    assert.equal(updateHabitCount, 0, 'failed translation must not overwrite the existing localized name');
+  });
+
+  test('H. Switching to English restores name from original_name with no provider call', async () => {
+    let updateHabitsParams = null;
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('UPDATE users')) {
+        return { rows: [{ preferred_language: params[0] }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        return { rows: [{ id: 'habit-h-1', name: 'ಬೆಳಿಗ್ಗೆ ಓಟ', original_name: 'Morning Run' }] };
+      }
+      if (q.includes('UPDATE habits') && q.includes('COALESCE(original_name, name) = $4')) {
+        updateHabitsParams = params;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text) => text);
+
+    const result = await updateUserLanguage(habitUserId, 'en');
+
+    assert.deepEqual(result, { language: 'en' });
+    assert.equal(localizeMock.mock.callCount(), 0, 'English must not call the translation provider');
+    assert.ok(updateHabitsParams, 'display name must be restored from original_name');
+    assert.equal(updateHabitsParams[2], 'Morning Run');
+    assert.equal(updateHabitsParams[3], 'Morning Run');
+    assert.equal(updateHabitsParams[4], 'en');
+  });
+
+  test('I. Migration adds original_name column and backfills existing habits', async () => {
+    const migration = require('../migrations/1787730000016_add_original_name_to_habits');
+    const calls = { columns: [], sql: [], dropped: [] };
+    const pgm = {
+      addColumn: (table, defs) => calls.columns.push({ table, defs }),
+      sql: (query) => calls.sql.push(query),
+      dropColumn: (table, column) => calls.dropped.push({ table, column }),
+    };
+
+    await migration.up(pgm);
+    migration.down(pgm);
+
+    assert.equal(calls.columns.length, 1);
+    assert.equal(calls.columns[0].table, 'habits');
+    assert.equal(calls.columns[0].defs.original_name.type, 'varchar(255)');
+
+    assert.equal(calls.sql.length, 1, 'migration must backfill existing rows');
+    const backfill = calls.sql[0].replace(/\s+/g, ' ');
+    assert.ok(backfill.includes('SET original_name = name'), 'backfill copies name into original_name');
+    assert.ok(backfill.includes('WHERE original_name IS NULL'), 'backfill only targets rows not yet populated');
+
+    assert.equal(calls.dropped.length, 1);
+    assert.equal(calls.dropped[0].table, 'habits');
+    assert.equal(calls.dropped[0].column, 'original_name');
   });
 });
 

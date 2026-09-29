@@ -43,6 +43,7 @@ const options = {
             id:             { type: 'string', format: 'uuid' },
             user_id:        { type: 'string', format: 'uuid' },
             name:           { type: 'string', example: 'Morning Run' },
+            original_name:  { type: 'string', example: 'Morning Run', nullable: true },
             description:    { type: 'string', example: 'Run 5km every morning', nullable: true },
             icon:           { type: 'string', example: '🏃', nullable: true },
             color:          { type: 'string', example: '#FF5733', nullable: true },
