@@ -476,7 +476,8 @@ async function retranslateUserHabitNames(userId, targetLanguage) {
       const source = habit.original_name;
       let localizedName;
 
-      if (language === DEFAULT_LANGUAGE) {
+      const isAsciiEnglish = /^[A-Za-z0-9\s.,!?'"()\-:;/_+]+$/.test(String(source).trim());
+      if (language === DEFAULT_LANGUAGE && isAsciiEnglish) {
         localizedName = source;
       } else {
         try {
@@ -492,13 +493,6 @@ async function retranslateUserHabitNames(userId, targetLanguage) {
         if (typeof localizedName !== 'string' || !localizedName.trim()) {
           console.warn(
             `[retranslateUserHabitNames] Empty translation to "${language}" for habit ${habit.id}; preserving current name`
-          );
-          return { id: habit.id, updated: false };
-        }
-
-        if (localizedName.trim() === String(source).trim()) {
-          console.warn(
-            `[retranslateUserHabitNames] Translation to "${language}" for habit ${habit.id} matched source text; preserving current name`
           );
           return { id: habit.id, updated: false };
         }

@@ -693,7 +693,9 @@ async function localizeHabitText(text, targetLang) {
   }
 
   const normalizedLang = normalizeLanguage(targetLang);
-  if (normalizedLang === DEFAULT_LANGUAGE) {
+  const isAsciiEnglish = /^[A-Za-z0-9\s.,!?'"()\-:;/_+]+$/.test(text.trim());
+
+  if (normalizedLang === DEFAULT_LANGUAGE && isAsciiEnglish) {
     return text.trim();
   }
 
@@ -708,11 +710,11 @@ async function localizeHabitText(text, targetLang) {
     const targetLangName = LANGUAGE_NAMES[normalizedLang] || normalizedLang;
 
     const prompt = `You are a translation assistant for a habit tracking application.
-Translate the following habit title or action phrase from English to ${targetLangName} (${normalizedLang}).
+Translate the following habit title or action phrase to ${targetLangName} (${normalizedLang}).
 Rules:
 - Provide ONLY the direct, natural translation of the habit name in ${targetLangName} script.
 - Do NOT include markdown, quotation marks, transliteration, explanations, punctuation, or extra text.
-- Preserve the concise habit name meaning (e.g., "Drink Water" -> "ನೀರು ಕುಡಿಯಿರಿ" in Kannada, "पानी पिएं" in Hindi).
+- Preserve the concise habit name meaning (e.g., "Drink Water" -> "ನೀರು ಕುಡಿಯಿರಿ" in Kannada, "ಕಾಫಿ ಕುಡಿಯಿರಿ" -> "Drink Coffee" in English).
 
 Habit name: "${text.trim()}"`;
 

@@ -1127,6 +1127,44 @@ describe('Multilingual System — original_name Preservation & Language-Change R
     assert.equal(updateHabitsParams[4], 'en');
   });
 
+  test('H2. Switching to English when original_name is in a non-English script translates it to English', async () => {
+    let updateHabitsParams = null;
+
+    mock.method(firebaseService, 'isFirebaseConfigured', () => false);
+    mock.method(pool, 'query', async (q, params) => {
+      if (q.includes('SELECT preferred_language FROM users')) {
+        return { rows: [{ preferred_language: 'kn' }] };
+      }
+      if (q.includes('UPDATE users')) {
+        return { rows: [{ preferred_language: params[0] }] };
+      }
+      if (q.includes('COALESCE(original_name, name) AS original_name')) {
+        return { rows: [{ id: 'habit-h2-1', name: 'ಕಾಫಿ ಕುಡಿಯಿರಿ', original_name: 'ಕಾಫಿ ಕುಡಿಯಿರಿ' }] };
+      }
+      if (q.includes('UPDATE habits') && q.includes('COALESCE(original_name, name) = $4')) {
+        updateHabitsParams = params;
+        return { rowCount: 1, rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const localizeMock = mock.method(translationService, 'localizeHabitText', async (text, lang) => {
+      if (text === 'ಕಾಫಿ ಕುಡಿಯಿರಿ' && lang === 'en') {
+        return 'Drink coffee';
+      }
+      return text;
+    });
+
+    const result = await updateUserLanguage(habitUserId, 'en');
+
+    assert.deepEqual(result, { language: 'en' });
+    assert.equal(localizeMock.mock.callCount(), 1, 'Non-ASCII original_name must be translated to English');
+    assert.ok(updateHabitsParams, 'display name must be updated to translated English text');
+    assert.equal(updateHabitsParams[2], 'Drink coffee');
+    assert.equal(updateHabitsParams[3], 'ಕಾಫಿ ಕುಡಿಯಿರಿ');
+    assert.equal(updateHabitsParams[4], 'en');
+  });
+
   test('I. Migration adds original_name column and backfills existing habits', async () => {
     const migration = require('../migrations/1787730000016_add_original_name_to_habits');
     const calls = { columns: [], sql: [], dropped: [] };
