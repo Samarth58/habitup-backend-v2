@@ -722,7 +722,7 @@ Habit name: "${text.trim()}"`;
     });
 
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Translation request timed out after 2500ms')), 2500);
+      setTimeout(() => reject(new Error('Translation request timed out after 8000ms')), 8000);
     });
 
     const response = await Promise.race([generatePromise, timeoutPromise]);
