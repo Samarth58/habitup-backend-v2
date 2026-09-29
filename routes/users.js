@@ -82,6 +82,10 @@ const router = Router();
  */
 router.get('/preferences/language', requireAuth, getUserLanguage);
 router.put('/preferences/language', requireAuth, updateUserLanguagePreference);
+router.patch('/preferences/language', requireAuth, updateUserLanguagePreference);
+router.get('/language', requireAuth, getUserLanguage);
+router.put('/language', requireAuth, updateUserLanguagePreference);
+router.patch('/language', requireAuth, updateUserLanguagePreference);
 
 /**
  * @swagger

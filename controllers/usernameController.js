@@ -147,8 +147,13 @@ async function updateUserLanguagePreference(req, res) {
     return res.status(401).json({ error: 'Unauthorized.' });
   }
 
-  const { language } = req.body || {};
-  if (!language) {
+  const rawLang =
+    req.body?.language ??
+    req.body?.preferred_language ??
+    req.body?.preferredLanguage ??
+    req.body?.lang;
+
+  if (!rawLang || typeof rawLang !== 'string' || !rawLang.trim()) {
     return res.status(400).json({
       error: 'Language is required',
       supportedLanguages: SUPPORTED_LANGUAGES,
@@ -156,7 +161,7 @@ async function updateUserLanguagePreference(req, res) {
   }
 
   try {
-    const result = await updateUserLanguage(userId, language);
+    const result = await updateUserLanguage(userId, rawLang);
     return res.status(200).json(result);
   } catch (err) {
     if (err.status === 400) {
