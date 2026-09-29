@@ -47,11 +47,11 @@ function getDayOfWeekFromDateStr(localDate) {
  * @param {string} localDate "YYYY-MM-DD"
  * @returns {Promise<{ planned: number, completed: number, remaining: number }>}
  */
-async function getHabitProgressForDate(userId, localDate) {
+async function getHabitProgressForDate(userId, localDate, client = pool) {
   const dayOfWeek = getDayOfWeekFromDateStr(localDate);
 
   // Query 1: count active habits planned for this day
-  const plannedResult = await pool.query(
+  const plannedResult = await client.query(
     `SELECT COUNT(h.id)::int AS planned
      FROM habits h
      WHERE h.user_id = $1
@@ -78,7 +78,7 @@ async function getHabitProgressForDate(userId, localDate) {
   }
 
   // Query 2: count completions for today, restricted to active planned habits
-  const completedResult = await pool.query(
+  const completedResult = await client.query(
     `SELECT COUNT(hc.id)::int AS completed
      FROM habit_completions hc
      JOIN habits h ON h.id = hc.habit_id

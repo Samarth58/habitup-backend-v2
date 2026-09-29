@@ -17,6 +17,7 @@ const {
   getCompletionsForHabit,
   getUserTimezone,
 } = require('../services/habitService');
+const { pool } = require('../services/db');
 const { calculateStreak } = require('../services/streakService');
 const { getHabitStats, getUserOverallStats } = require('../services/statsService');
 const { handleHabitCompletionPandaNotification } = require('../services/pandaNotificationService');
@@ -373,32 +374,92 @@ async function addHabitCompletion(req, res) {
 
 /**
  * DELETE /habits/:id/completions/:date
- * Removes completion for a specified date and returns the updated streak.
+ * Removes completion for a specified date, reverses granted Bamboo rewards, and returns the updated streak and balance.
  */
 async function removeHabitCompletion(req, res) {
   const userId = req.userId;
   const habitId = req.params.id;
   const dateStr = req.params.date;
 
+  const client = await pool.connect();
+
   try {
     const habit = await getHabitById(userId, habitId);
     if (!habit) {
+      client.release();
       return res.status(404).json({ error: 'Habit not found.' });
     }
 
     const timezone = await getUserTimezone(userId, req.user?.timezone);
-    const removed = await removeCompletion(userId, habitId, dateStr);
+
+    await client.query('BEGIN');
+
+    // 1. Remove the completion record atomically
+    const removed = await removeCompletion(userId, habitId, dateStr, client);
     if (!removed) {
+      await client.query('ROLLBACK');
+      client.release();
       return res.status(404).json({ error: 'Completion not found.' });
     }
+
+    let totalDeducted = 0;
+
+    // 2. Revoke specific +10 HABIT_COMPLETION reward
+    const habitRevocation = await bambooService.revokeBambooReward(
+      userId,
+      'HABIT_COMPLETION',
+      `completion_${habitId}_${dateStr}`,
+      client
+    );
+    if (habitRevocation.revoked) {
+      totalDeducted += habitRevocation.bamboo_deducted;
+    }
+
+    // 3. Check if 100% daily perfection bonus (+15) should also be reversed
+    try {
+      const progress = await personalizedNotificationService.getHabitProgressForDate(userId, dateStr, client);
+      if (progress.planned > 0 && progress.remaining > 0) {
+        const bonusRevocation = await bambooService.revokeBambooReward(
+          userId,
+          'DAILY_100_BONUS',
+          `daily_bonus_${dateStr}`,
+          client
+        );
+        if (bonusRevocation.revoked) {
+          totalDeducted += bonusRevocation.bamboo_deducted;
+        }
+      }
+    } catch (err) {
+      console.error('[dailyBambooBonusRevocation]', err);
+    }
+
+    // 4. Retrieve authoritative current wallet balance
+    const walletRes = await client.query(
+      'SELECT balance FROM user_bamboo_wallets WHERE user_id = $1',
+      [userId]
+    );
+    const currentBambooBalance = walletRes.rows[0]?.balance ?? 100;
+
+    await client.query('COMMIT');
+    client.release();
+
     logActivity(userId, 'HABIT_COMPLETION_REMOVED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
 
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
     const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
 
-    return res.json({ message: 'Completion removed.', streak });
+    return res.json({
+      message: 'Completion removed.',
+      streak,
+      bamboo_deducted: totalDeducted,
+      current_bamboo_balance: currentBambooBalance,
+    });
   } catch (err) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (_) {}
+    client.release();
     console.error('[removeHabitCompletion]', err);
     return res.status(500).json({ error: 'Failed to remove completion.' });
   }

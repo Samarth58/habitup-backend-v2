@@ -210,15 +210,16 @@ async function addCompletion(userId, habitId, timezone) {
  * @param {string} userId
  * @param {string} habitId
  * @param {string} dateStr "YYYY-MM-DD"
+ * @param {object} [client=pool]
  * @returns {Promise<boolean>} True if removed, false if not found.
  */
-async function removeCompletion(userId, habitId, dateStr) {
+async function removeCompletion(userId, habitId, dateStr, client = pool) {
   const query = `
     DELETE FROM habit_completions
     WHERE habit_id = $1 AND user_id = $2 AND completion_date = $3
     RETURNING id
   `;
-  const { rowCount } = await pool.query(query, [habitId, userId, dateStr]);
+  const { rowCount } = await client.query(query, [habitId, userId, dateStr]);
   return rowCount > 0;
 }
 

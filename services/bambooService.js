@@ -322,11 +322,99 @@ async function getTransactions(userId, limit = 50, offset = 0) {
   };
 }
 
+/**
+ * Reverses a previously granted Bamboo reward atomically and clears the idempotency lock.
+ *
+ * @param {string} userId - User UUID
+ * @param {string} type - Transaction category (e.g. 'HABIT_COMPLETION', 'DAILY_100_BONUS')
+ * @param {string} referenceId - Idempotency key (e.g. 'completion_<id>_<date>')
+ * @param {object} [client] - Optional pg client if already inside an active transaction
+ * @returns {Promise<{ revoked: boolean, bamboo_deducted: number, current_bamboo_balance: number }>}
+ */
+async function revokeBambooReward(userId, type, referenceId, client = null) {
+  if (!referenceId) {
+    throw new Error('Reference ID is required to revoke a Bamboo reward.');
+  }
+
+  const isInternalTransaction = !client;
+  const dbClient = client || (await pool.connect());
+
+  try {
+    if (isInternalTransaction) {
+      await dbClient.query('BEGIN');
+    }
+
+    // 1. Find the specific granted reward transaction
+    const txRes = await dbClient.query(
+      `SELECT id, amount
+       FROM bamboo_transactions
+       WHERE user_id = $1 AND type = $2 AND reference_id = $3
+       FOR UPDATE`,
+      [userId, type, referenceId]
+    );
+
+    if (txRes.rows.length === 0) {
+      // Transaction was not found (or already revoked)
+      const walletRes = await dbClient.query(
+        'SELECT balance FROM user_bamboo_wallets WHERE user_id = $1',
+        [userId]
+      );
+      if (isInternalTransaction) {
+        await dbClient.query('COMMIT');
+      }
+      return {
+        revoked: false,
+        bamboo_deducted: 0,
+        current_bamboo_balance: walletRes.rows[0]?.balance ?? 100,
+      };
+    }
+
+    const txId = txRes.rows[0].id;
+    const amountToDeduct = Math.max(0, txRes.rows[0].amount);
+
+    // 2. Delete the transaction record to clear idempotency lock and restore clean audit state
+    await dbClient.query('DELETE FROM bamboo_transactions WHERE id = $1', [txId]);
+
+    // 3. Update wallet balance and total_earned
+    const updateRes = await dbClient.query(
+      `UPDATE user_bamboo_wallets
+       SET balance = GREATEST(0, balance - $1),
+           total_earned = GREATEST(0, total_earned - $1),
+           updated_at = NOW()
+       WHERE user_id = $2
+       RETURNING balance`,
+      [amountToDeduct, userId]
+    );
+
+    const newBalance = updateRes.rows[0]?.balance ?? 0;
+
+    if (isInternalTransaction) {
+      await dbClient.query('COMMIT');
+    }
+
+    return {
+      revoked: true,
+      bamboo_deducted: amountToDeduct,
+      current_bamboo_balance: newBalance,
+    };
+  } catch (err) {
+    if (isInternalTransaction) {
+      await dbClient.query('ROLLBACK');
+    }
+    throw err;
+  } finally {
+    if (isInternalTransaction) {
+      dbClient.release();
+    }
+  }
+}
+
 module.exports = {
   getLocalDateInTimezone,
   getOrCreateWallet,
   addBamboo,
   deductBamboo,
+  revokeBambooReward,
   claimDailyGift,
   getTransactions,
 };
