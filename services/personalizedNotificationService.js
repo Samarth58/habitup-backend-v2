@@ -1,6 +1,7 @@
 const { pool } = require('./db');
 const { getLocalizedNotification, translate } = require('./translationService');
 const { getUserNotificationLanguage } = require('./userLanguageService');
+const { normalizeCompletionDate } = require('./habitService');
 
 /**
  * Generic fallback templates used when personalization cannot be computed.
@@ -30,7 +31,8 @@ const FALLBACK_TEMPLATES = {
  * @returns {number} 0 (Sun) … 6 (Sat)
  */
 function getDayOfWeekFromDateStr(localDate) {
-  return new Date(`${localDate}T00:00:00Z`).getUTCDay();
+  const normalized = normalizeCompletionDate(localDate) || localDate;
+  return new Date(`${normalized}T00:00:00Z`).getUTCDay();
 }
 
 /**
@@ -48,7 +50,8 @@ function getDayOfWeekFromDateStr(localDate) {
  * @returns {Promise<{ planned: number, completed: number, remaining: number }>}
  */
 async function getHabitProgressForDate(userId, localDate, client = pool) {
-  const dayOfWeek = getDayOfWeekFromDateStr(localDate);
+  const normalizedDate = normalizeCompletionDate(localDate) || localDate;
+  const dayOfWeek = getDayOfWeekFromDateStr(normalizedDate);
 
   // Query 1: count active habits planned for this day
   const plannedResult = await client.query(

@@ -166,30 +166,78 @@ async function getHabitSchedule(habitId) {
 }
 
 /**
- * Determines "today" using the user's timezone and inserts a habit completion row.
+ * Canonical completion date normalization function.
+ * Converts valid completion dates (YYYY-MM-DD, ISO 8601 strings, Date objects)
+ * into canonical 'YYYY-MM-DD' format.
+ * Returns null if the input is invalid or cannot be parsed as a valid calendar date.
+ *
+ * @param {string|Date} rawDate
+ * @returns {string|null} 'YYYY-MM-DD' or null
+ */
+function normalizeCompletionDate(rawDate) {
+  if (!rawDate) return null;
+
+  if (rawDate instanceof Date) {
+    if (isNaN(rawDate.getTime())) return null;
+    return rawDate.toISOString().slice(0, 10);
+  }
+
+  if (typeof rawDate !== 'string') return null;
+
+  const trimmed = rawDate.trim();
+  if (!trimmed) return null;
+
+  // 1. Direct YYYY-MM-DD or leading YYYY-MM-DD (e.g. ISO 8601 "2026-09-29T00:00:00.000Z", "2026-09-29 00:00:00")
+  const ymdMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10);
+    const day = parseInt(ymdMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const d = new Date(Date.UTC(year, month - 1, day));
+      if (d.getUTCFullYear() === year && d.getUTCMonth() === month - 1 && d.getUTCDate() === day) {
+        return `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]}`;
+      }
+    }
+  }
+
+  // 2. Fallback for other parseable date strings
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
+/**
+ * Inserts a completion row for habit_id + today in user's timezone.
  * Handles UNIQUE(habit_id, completion_date) constraint gracefully (undo-toggle safe).
  *
  * @param {string} userId
  * @param {string} habitId
  * @param {string} timezone IANA timezone string
+ * @param {string} [customDateStr] Optional custom completion date (YYYY-MM-DD or ISO)
  * @returns {Promise<object>} The inserted or existing completion record.
  */
-async function addCompletion(userId, habitId, timezone) {
-  let todayStr;
-  try {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const parts = formatter.formatToParts(new Date());
-    const year = parts.find((p) => p.type === 'year').value;
-    const month = parts.find((p) => p.type === 'month').value;
-    const day = parts.find((p) => p.type === 'day').value;
-    todayStr = `${year}-${month}-${day}`;
-  } catch (err) {
-    todayStr = new Date().toISOString().slice(0, 10);
+async function addCompletion(userId, habitId, timezone, customDateStr = null) {
+  let todayStr = customDateStr ? normalizeCompletionDate(customDateStr) : null;
+  if (!todayStr) {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const parts = formatter.formatToParts(new Date());
+      const year = parts.find((p) => p.type === 'year').value;
+      const month = parts.find((p) => p.type === 'month').value;
+      const day = parts.find((p) => p.type === 'day').value;
+      todayStr = `${year}-${month}-${day}`;
+    } catch (err) {
+      todayStr = new Date().toISOString().slice(0, 10);
+    }
   }
 
   const query = `
@@ -209,17 +257,18 @@ async function addCompletion(userId, habitId, timezone) {
  *
  * @param {string} userId
  * @param {string} habitId
- * @param {string} dateStr "YYYY-MM-DD"
+ * @param {string} dateStr "YYYY-MM-DD" or ISO string
  * @param {object} [client=pool]
  * @returns {Promise<boolean>} True if removed, false if not found.
  */
 async function removeCompletion(userId, habitId, dateStr, client = pool) {
+  const normalizedDate = normalizeCompletionDate(dateStr) || dateStr;
   const query = `
     DELETE FROM habit_completions
     WHERE habit_id = $1 AND user_id = $2 AND completion_date = $3
     RETURNING id
   `;
-  const { rowCount } = await client.query(query, [habitId, userId, dateStr]);
+  const { rowCount } = await client.query(query, [habitId, userId, normalizedDate]);
   return rowCount > 0;
 }
 
@@ -370,6 +419,7 @@ module.exports = {
   unarchiveHabit,
   setHabitSchedule,
   getHabitSchedule,
+  normalizeCompletionDate,
   addCompletion,
   removeCompletion,
   getCompletionDates,

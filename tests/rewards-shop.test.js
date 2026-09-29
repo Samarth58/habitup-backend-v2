@@ -623,4 +623,144 @@ describe('Bamboo Rewards & Shop System', () => {
     assert.strictEqual(compData.completions.length, 1);
     assert.strictEqual(compData.completions[0].completion_date, dateStr);
   });
+
+  // ─── 9. Date Normalization & Reward Revocation ISO Formats ───────────────────
+
+  test('27. Case 1: Uncompleting with ISO timestamp (2026-09-29T00:00:00.000Z) revokes +10 reward and restores balance', async () => {
+    const user = await registerTestUser(); // balance: 100
+
+    const h1Res = await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'Meditation', frequency_type: 'daily' }) }, user.accessToken);
+    await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'Read Book', frequency_type: 'daily' }) }, user.accessToken);
+    const { habit: h1 } = await h1Res.json();
+
+    // 1. Complete habit for 2026-09-29 (100 -> 110)
+    const compRes = await authFetch(`/habits/${h1.id}/completions`, { method: 'POST', body: JSON.stringify({ completion_date: '2026-09-29' }) }, user.accessToken);
+    const compData = await compRes.json();
+    assert.strictEqual(compData.bamboo_earned, 10);
+    assert.strictEqual(compData.current_bamboo_balance, 110);
+
+    // 2. Uncomplete using ISO 8601 timestamp with encoded URI
+    const isoDateStr = encodeURIComponent('2026-09-29T00:00:00.000Z');
+    const undoRes = await authFetch(`/habits/${h1.id}/completions/${isoDateStr}`, { method: 'DELETE' }, user.accessToken);
+    assert.strictEqual(undoRes.status, 200);
+    const undoData = await undoRes.json();
+    assert.strictEqual(undoData.message, 'Completion removed.');
+    assert.strictEqual(undoData.bamboo_deducted, 10);
+    assert.strictEqual(undoData.current_bamboo_balance, 100);
+
+    // 3. Confirm balance via /rewards/balance
+    const balRes = await authFetch('/rewards/balance', { method: 'GET' }, user.accessToken);
+    const balData = await balRes.json();
+    assert.strictEqual(balData.balance, 100);
+
+    // 4. Confirm transaction ledger has 0 orphan HABIT_COMPLETION records
+    const txRes = await authFetch('/rewards/transactions', { method: 'GET' }, user.accessToken);
+    const txData = await txRes.json();
+    const completionTxs = txData.transactions.filter(t => t.type === 'HABIT_COMPLETION');
+    assert.strictEqual(completionTxs.length, 0);
+  });
+
+  test('28. Case 2: Uncompleting with canonical YYYY-MM-DD (2026-09-29) revokes +10 reward and restores balance', async () => {
+    const user = await registerTestUser(); // balance: 100
+
+    const h1Res = await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'Yoga', frequency_type: 'daily' }) }, user.accessToken);
+    await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'Stretch', frequency_type: 'daily' }) }, user.accessToken);
+    const { habit: h1 } = await h1Res.json();
+
+    // 1. Complete habit for 2026-09-29 (100 -> 110)
+    const compRes = await authFetch(`/habits/${h1.id}/completions`, { method: 'POST', body: JSON.stringify({ completion_date: '2026-09-29' }) }, user.accessToken);
+    const compData = await compRes.json();
+    assert.strictEqual(compData.bamboo_earned, 10);
+    assert.strictEqual(compData.current_bamboo_balance, 110);
+
+    // 2. Uncomplete using canonical YYYY-MM-DD
+    const undoRes = await authFetch(`/habits/${h1.id}/completions/2026-09-29`, { method: 'DELETE' }, user.accessToken);
+    assert.strictEqual(undoRes.status, 200);
+    const undoData = await undoRes.json();
+    assert.strictEqual(undoData.message, 'Completion removed.');
+    assert.strictEqual(undoData.bamboo_deducted, 10);
+    assert.strictEqual(undoData.current_bamboo_balance, 100);
+
+    // 3. Confirm balance
+    const balRes = await authFetch('/rewards/balance', { method: 'GET' }, user.accessToken);
+    assert.strictEqual((await balRes.json()).balance, 100);
+
+    // 4. Confirm transaction ledger has 0 orphan HABIT_COMPLETION records
+    const txRes = await authFetch('/rewards/transactions', { method: 'GET' }, user.accessToken);
+    const txData = await txRes.json();
+    const completionTxs = txData.transactions.filter(t => t.type === 'HABIT_COMPLETION');
+    assert.strictEqual(completionTxs.length, 0);
+  });
+
+  test('29. Case 3: Repeated DELETE calls are idempotent and never double-deduct Bamboo', async () => {
+    const user = await registerTestUser(); // balance: 100
+
+    const h1Res = await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'Write Code', frequency_type: 'daily' }) }, user.accessToken);
+    const { habit: h1 } = await h1Res.json();
+
+    // Complete
+    await authFetch(`/habits/${h1.id}/completions`, { method: 'POST', body: JSON.stringify({ completion_date: '2026-09-29' }) }, user.accessToken);
+
+    // First DELETE -> 200 OK, revokes reward
+    const del1 = await authFetch(`/habits/${h1.id}/completions/2026-09-29`, { method: 'DELETE' }, user.accessToken);
+    assert.strictEqual(del1.status, 200);
+    const del1Data = await del1.json();
+    assert.strictEqual(del1Data.current_bamboo_balance, 100);
+
+    // Second DELETE -> 404 Completion not found, balance remains 100
+    const del2 = await authFetch(`/habits/${h1.id}/completions/2026-09-29`, { method: 'DELETE' }, user.accessToken);
+    assert.strictEqual(del2.status, 404);
+
+    // Third DELETE with ISO format -> 404 Completion not found
+    const del3 = await authFetch(`/habits/${h1.id}/completions/${encodeURIComponent('2026-09-29T00:00:00.000Z')}`, { method: 'DELETE' }, user.accessToken);
+    assert.strictEqual(del3.status, 404);
+
+    // Verify balance is still exactly 100
+    const balRes = await authFetch('/rewards/balance', { method: 'GET' }, user.accessToken);
+    assert.strictEqual((await balRes.json()).balance, 100);
+  });
+
+  test('30. Case 4: Unrelated transaction protection (Daily Gift, Shop, Initial Bonus unaffected)', async () => {
+    const user = await registerTestUser(); // 100 initial bonus
+
+    // Claim daily gift (+35) -> balance 135
+    await authFetch('/rewards/daily-gift', { method: 'POST' }, user.accessToken);
+
+    // Buy Party Cone (-40) -> balance 95
+    await authFetch('/shop/purchase', { method: 'POST', body: JSON.stringify({ itemId: 'party_hat' }) }, user.accessToken);
+
+    // Create 3 habits
+    const h1Res = await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'H1', frequency_type: 'daily' }) }, user.accessToken);
+    const h2Res = await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'H2', frequency_type: 'daily' }) }, user.accessToken);
+    await authFetch('/habits', { method: 'POST', body: JSON.stringify({ name: 'H3', frequency_type: 'daily' }) }, user.accessToken);
+    const { habit: h1 } = await h1Res.json();
+    const { habit: h2 } = await h2Res.json();
+
+    // Complete H1 (+10) -> balance 105
+    await authFetch(`/habits/${h1.id}/completions`, { method: 'POST', body: JSON.stringify({ completion_date: '2026-09-29' }) }, user.accessToken);
+
+    // Complete H2 (+10) -> balance 115
+    await authFetch(`/habits/${h2.id}/completions`, { method: 'POST', body: JSON.stringify({ completion_date: '2026-09-29' }) }, user.accessToken);
+
+    // Verify pre-uncomplete balance is 115
+    const preBal = await authFetch('/rewards/balance', { method: 'GET' }, user.accessToken);
+    assert.strictEqual((await preBal.json()).balance, 115);
+
+    // Uncomplete H1 using ISO timestamp -> should only revoke H1 (+10), balance becomes 105
+    const undoRes = await authFetch(`/habits/${h1.id}/completions/${encodeURIComponent('2026-09-29T12:34:56.789Z')}`, { method: 'DELETE' }, user.accessToken);
+    const undoData = await undoRes.json();
+    assert.strictEqual(undoData.bamboo_deducted, 10);
+    assert.strictEqual(undoData.current_bamboo_balance, 105);
+
+    // Verify inventory still has items
+    const invRes = await authFetch('/shop/inventory', { method: 'GET' }, user.accessToken);
+    const { inventory } = await invRes.json();
+    assert.ok(inventory.includes('party_hat'));
+    assert.ok(inventory.includes('default_bamboo'));
+
+    // Verify H2 completion is still present
+    const h2Comps = await authFetch(`/habits/${h2.id}/completions`, { method: 'GET' }, user.accessToken);
+    const h2CompsData = await h2Comps.json();
+    assert.strictEqual(h2CompsData.completions.length, 1);
+  });
 });

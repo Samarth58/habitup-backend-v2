@@ -251,4 +251,33 @@ describe('GET /habits/:id/completions', () => {
     const body = await res.json();
     assert.ok(body.error);
   });
+
+  describe('normalizeCompletionDate Unit Tests', () => {
+    const { normalizeCompletionDate } = require('../services/habitService');
+
+    test('normalizes canonical YYYY-MM-DD correctly', () => {
+      assert.equal(normalizeCompletionDate('2026-09-29'), '2026-09-29');
+      assert.equal(normalizeCompletionDate('2026-01-01'), '2026-01-01');
+      assert.equal(normalizeCompletionDate('2026-12-31'), '2026-12-31');
+    });
+
+    test('normalizes ISO 8601 strings and timestamps to YYYY-MM-DD', () => {
+      assert.equal(normalizeCompletionDate('2026-09-29T00:00:00.000Z'), '2026-09-29');
+      assert.equal(normalizeCompletionDate('2026-09-29T15:45:30.123Z'), '2026-09-29');
+      assert.equal(normalizeCompletionDate('2026-09-29 08:30:00'), '2026-09-29');
+    });
+
+    test('handles Date objects', () => {
+      const d = new Date('2026-09-29T00:00:00.000Z');
+      assert.equal(normalizeCompletionDate(d), '2026-09-29');
+    });
+
+    test('returns null for invalid inputs', () => {
+      assert.equal(normalizeCompletionDate(null), null);
+      assert.equal(normalizeCompletionDate(undefined), null);
+      assert.equal(normalizeCompletionDate(''), null);
+      assert.equal(normalizeCompletionDate('not-a-date'), null);
+      assert.equal(normalizeCompletionDate(12345), null);
+    });
+  });
 });

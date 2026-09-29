@@ -11,6 +11,7 @@ const {
   unarchiveHabit: unarchiveHabitService,
   setHabitSchedule,
   getHabitSchedule,
+  normalizeCompletionDate,
   addCompletion,
   removeCompletion,
   getCompletionDates,
@@ -315,14 +316,15 @@ async function addHabitCompletion(req, res) {
     }
 
     const timezone = await getUserTimezone(userId, req.user?.timezone);
-    const completion = await addCompletion(userId, habitId, timezone);
+    const customDate = req.body?.completion_date ? normalizeCompletionDate(req.body.completion_date) : null;
+    const completion = await addCompletion(userId, habitId, timezone, customDate);
     logActivity(userId, 'HABIT_COMPLETED', { habit_id: habitId }, req).catch((err) => console.error('[habit activity]', err));
     const schedule = await getHabitSchedule(habitId);
     const completionDates = await getCompletionDates(userId, habitId);
     const streak = calculateStreak(habit.frequency_type, schedule, completionDates, timezone);
 
     // 1. Award +10 Bamboo Coins for habit completion (idempotent)
-    const completionDateStr = completion.completion_date;
+    const completionDateStr = normalizeCompletionDate(completion.completion_date);
     const habitRewardRes = await bambooService.addBamboo(
       userId,
       10,
@@ -379,7 +381,12 @@ async function addHabitCompletion(req, res) {
 async function removeHabitCompletion(req, res) {
   const userId = req.userId;
   const habitId = req.params.id;
-  const dateStr = req.params.date;
+  const rawDate = req.params.date;
+
+  const normalizedDate = normalizeCompletionDate(rawDate);
+  if (!normalizedDate) {
+    return res.status(400).json({ error: 'Invalid completion date format. Expected YYYY-MM-DD or valid ISO date.' });
+  }
 
   const client = await pool.connect();
 
@@ -394,8 +401,8 @@ async function removeHabitCompletion(req, res) {
 
     await client.query('BEGIN');
 
-    // 1. Remove the completion record atomically
-    const removed = await removeCompletion(userId, habitId, dateStr, client);
+    // 1. Remove the completion record atomically using normalized YYYY-MM-DD date
+    const removed = await removeCompletion(userId, habitId, normalizedDate, client);
     if (!removed) {
       await client.query('ROLLBACK');
       client.release();
@@ -404,11 +411,11 @@ async function removeHabitCompletion(req, res) {
 
     let totalDeducted = 0;
 
-    // 2. Revoke specific +10 HABIT_COMPLETION reward
+    // 2. Revoke specific +10 HABIT_COMPLETION reward using canonical reference format
     const habitRevocation = await bambooService.revokeBambooReward(
       userId,
       'HABIT_COMPLETION',
-      `completion_${habitId}_${dateStr}`,
+      `completion_${habitId}_${normalizedDate}`,
       client
     );
     if (habitRevocation.revoked) {
@@ -417,12 +424,12 @@ async function removeHabitCompletion(req, res) {
 
     // 3. Check if 100% daily perfection bonus (+15) should also be reversed
     try {
-      const progress = await personalizedNotificationService.getHabitProgressForDate(userId, dateStr, client);
+      const progress = await personalizedNotificationService.getHabitProgressForDate(userId, normalizedDate, client);
       if (progress.planned > 0 && progress.remaining > 0) {
         const bonusRevocation = await bambooService.revokeBambooReward(
           userId,
           'DAILY_100_BONUS',
-          `daily_bonus_${dateStr}`,
+          `daily_bonus_${normalizedDate}`,
           client
         );
         if (bonusRevocation.revoked) {
