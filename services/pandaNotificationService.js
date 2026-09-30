@@ -296,7 +296,9 @@ async function handleHabitCompletionPandaNotification({ userId, habitId, streak,
 
     for (const dt of deviceTokens) {
       try {
-        await notificationService.sendPushNotification(dt.token, payload);
+        // Data-only FCM: Panda/in-app only, no Android system-tray notification.
+        // Title/body remain in `data` so the app can render the Panda card in-app.
+        await notificationService.sendPushNotification(dt.token, payload, { dataOnly: true });
         anySent = true;
       } catch (sendErr) {
         lastError = sendErr.message || String(sendErr);

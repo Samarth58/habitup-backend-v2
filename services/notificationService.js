@@ -8,9 +8,13 @@ const firebaseService = require('./firebaseService');
  * @param {string} notificationData.title - Notification title
  * @param {string} notificationData.body - Notification body
  * @param {Record<string, string>} [notificationData.data] - Optional string key-value payload
+ * @param {object} [options] - Delivery options
+ * @param {boolean} [options.dataOnly=false] - When true, sends a data-only payload
+ *   (no `notification` block) so Android/iOS do NOT show a system-tray notification.
+ *   The app handles the payload in-app (used for Panda habit-completion notifications).
  * @returns {Promise<{ success: boolean, messageId: string }>} Result containing the message ID
  */
-async function sendPushNotification(token, { title, body, data }) {
+async function sendPushNotification(token, { title, body, data }, options = {}) {
   if (!token || typeof token !== 'string' || !token.trim()) {
     throw new Error('Device token is required to send push notification.');
   }
@@ -26,6 +30,46 @@ async function sendPushNotification(token, { title, body, data }) {
   const messaging = firebaseService.getFirebaseMessaging();
   const cleanTitle = title.trim();
   const cleanBody = body.trim();
+  const dataOnly = Boolean(options && options.dataOnly);
+
+  if (dataOnly) {
+    const dataPayload = {
+      title: cleanTitle,
+      body: cleanBody,
+    };
+    if (data && typeof data === 'object') {
+      for (const [key, val] of Object.entries(data)) {
+        dataPayload[key] = String(val);
+      }
+    }
+    const dataOnlyMessage = {
+      token: token.trim(),
+      data: dataPayload,
+      android: {
+        priority: 'high',
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10',
+        },
+        payload: {
+          aps: {
+            contentAvailable: true,
+          },
+        },
+      },
+    };
+    try {
+      const messageId = await messaging.send(dataOnlyMessage);
+      return {
+        success: true,
+        messageId,
+      };
+    } catch (err) {
+      console.error('[sendPushNotification] Firebase messaging error:', err.code || err.message);
+      throw err;
+    }
+  }
 
   const messagePayload = {
     token: token.trim(),
